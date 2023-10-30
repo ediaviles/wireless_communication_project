@@ -42,32 +42,36 @@ save('transmitsignal.mat','transmitsignal')
 
 load receivedsignal.mat
 
+% X axis values for plots %
+t_transmitted = [1:length(transmitsignal)] / Fs * 10^6;
+t_received = [1:length(receivedsignal)] / Fs * 10^6;
+
 
 figure(1)
 clf
 subplot(2,1,1)
-plot(real(transmitsignal),'b')
+plot(t_transmitted, real(transmitsignal),'b')
 hold on
-plot(imag(transmitsignal),'r')
+plot(t_transmitted, imag(transmitsignal),'r')
 legend('real','imag')
 ylabel('xI(t)  and  xQ(t)')
-xlabel('Time in samples')
+xlabel('Time in microseconds')
 subplot(2,1,2)
-plot(real(receivedsignal),'b')
+plot(t_received, real(receivedsignal),'b')
 hold on
-plot(imag(receivedsignal),'r')
+plot(t_received, imag(receivedsignal),'r')
 zoom xon
 legend('real','imag')
 ylabel('yI(t)  and  yQ(t)')
-xlabel('Time in samples')
+xlabel('Time in microseconds')
 
 figure(2)
 clf
 subplot(2,1,1)
-plot([0:length(transmitsignal)-1]/length(transmitsignal)-0.5, abs(fftshift(fft(transmitsignal))))
+plot(([0:length(transmitsignal)-1]/length(transmitsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(transmitsignal))))
 ylabel('abs(X(f))')
-xlabel('Frequency in 1/samples')
+xlabel('Frequency in MHz')
 subplot(2,1,2)
-plot([0:length(receivedsignal)-1]/length(receivedsignal)-0.5, abs(fftshift(fft(receivedsignal))))
+plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
 ylabel('abs(Y(f))')
-xlabel('Frequency in 1/samples')
+xlabel('Frequency in MHz')
