@@ -46,3 +46,11 @@ plot(imag(transmitsignal),'r')
 legend('real','imag')
 ylabel('xI(t)  and  xQ(t)')
 xlabel('Time in samples')
+
+
+figure(2)
+clf
+subplot(2,1,1)
+plot([0:length(transmitsignal)-1]/length(transmitsignal)-0.5, abs(fftshift(fft(transmitsignal))))
+ylabel('abs(X(f))')
+xlabel('Frequency in 1/samples')
