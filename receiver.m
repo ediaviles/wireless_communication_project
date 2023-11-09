@@ -22,20 +22,27 @@ matched_filter = fliplr(pt);
 z_I = conv(y_I, matched_filter);
 z_Q = conv(y_Q, matched_filter);
 
-% Sample
-z_Ik = z_I(1:L:length(z_I));
-z_Qk = z_Q(1:L:length(z_Q));
+z_k = z_I + j * z_Q;
 
 % Synchronization
+y_corr = xcorr(y_base, known_bits);
+[max_v, max_index] = max(abs(y_sync));
 
+index = max_index + length(known_bits);
+z_sync = z_k(index:length(z_k));
 
 % Equalization
 
 
-z_k = z_Ik + j * z_Qk;
 
 % demodulate (threshold)
-z_demodulated = z_k > 0;
+z_demodulated = z_sync > 0;
+
+% Sample
+z_Ik = z_I(1:L:length(z_I));
+z_Qk = z_Q(1:L:length(z_Q));
+
+%z_k = z_Ik + j * z_Qk;
 
 % recover bits
 

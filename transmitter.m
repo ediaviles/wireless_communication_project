@@ -22,6 +22,7 @@ L = floor(Fs*T);
 N = 51; % Length of filter in symbol periods.
 Ns = floor(N*L); % Number of filter samples
 
+known_bits = ones(1, 100);
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
@@ -36,7 +37,7 @@ x_Q = conv(xk_Q,  pt);
 
 x_base = x_I + 1j* x_Q;
 
-transmitsignal = x_base;
+transmitsignal = [known_bits, x_base];
 
 save('transmitsignal.mat','transmitsignal')
 
