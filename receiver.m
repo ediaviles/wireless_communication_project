@@ -1,0 +1,35 @@
+% sampling freq.:
+Fs = 200 * 10^6;
+
+% symbol period:
+T = 1/20 * 10^-6;
+
+% oversampling factor:
+L = floor(Fs*T);
+
+N = 51; % Length of filter in symbol periods.
+Ns = floor(N*L); % Number of filter samples
+
+y_base = receivedsignal;
+
+y_I = real(y_base);
+y_Q = imag(y_base);
+
+pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
+
+% filter using matched filter
+z_I = conv(y_I, pt);
+z_Q = conv(y_Q, pt);
+
+% Synchronization
+
+% Equalization
+
+
+z_k = z_I + j * z_Q;
+
+% demodulate (threshold)
+z_demodulated = z_k > 0;
+
+% recover bits
+
