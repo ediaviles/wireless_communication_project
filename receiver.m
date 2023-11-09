@@ -18,7 +18,7 @@ y_Q = imag(y_base);
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
 
 % Synchronization
-y_corr = xcorr(known_bits, y_base);
+y_corr = xcorr(timing_sync_bits, y_base);
 [max_v, max_index] = max(abs(y_corr));
 
 index = max_index + length(known_bits);
