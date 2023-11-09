@@ -25,6 +25,8 @@ Ns = floor(N*L); % Number of filter samples
 frequency_sync_bits = ones(1, 1000);
 rng(5);
 timing_sync_bits = (randn(1,1000) > 0.5) * 2 - 1;
+pilot_sequence = (randn(1, 1000) > 0.5) * 2 - 1;
+
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
@@ -39,7 +41,7 @@ x_Q = conv(xk_Q,  pt);
 
 x_base = x_I + 1j* x_Q;
 
-transmitsignal = [frequency_sync_bits, timing_sync_bits, x_base];
+transmitsignal = [frequency_sync_bits, timing_sync_bits, pilot_sequence, x_base];
 
 save('transmitsignal.mat','transmitsignal')
 
