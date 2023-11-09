@@ -18,16 +18,23 @@ y_Q = imag(y_base);
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
 
 % filter using matched filter
-z_I = conv(y_I, pt);
-z_Q = conv(y_Q, pt);
+matched_filter = fliplr(pt);
+z_I = conv(y_I, matched_filter);
+z_Q = conv(y_Q, matched_filter);
 
-% sample using kT
+% Sample
+z_Ik = z_I[];
+z_Qk = z_Q[]
 
-% output should be decoded bits
+% Synchronization
+
+% Equalization
+
+
+z_k = z_I + j * z_Q;
 
 % demodulate (threshold)
-z_k = z_I + j * z_Q;
-z_
+z_demodulated = z_k > 0;
 
 % recover bits
 
