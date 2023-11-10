@@ -12,10 +12,22 @@ Ns = floor(N*L); % Number of filter samples
 
 y_base = receivedsignal;
 
-y_I = real(y_base);
-y_Q = imag(y_base);
-
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
+
+% Synchronization
+y_corr = xcorr(timing_sync_bits, y_base);
+[max_v, max_index] = max(abs(y_corr));
+
+index = max_index + length(timing_sync_bits) + length(pilot_sequence);
+y_sync = y_base(index:length(y_base));
+
+% Equalization
+p = y_base(max_index+length(timing_sync_bits):index-1);
+one_tap = transpose
+
+
+y_I = real(y_sync);
+y_Q = imag(y_sync);
 
 % filter using matched filter
 matched_filter = fliplr(pt);
@@ -26,19 +38,10 @@ z_Q = conv(y_Q, matched_filter);
 z_Ik = z_I(1:L:length(z_I));
 z_Qk = z_Q(1:L:length(z_Q));
 
-% Synchronization
-y_sync = xcorr(y_base, known_bits);
-[max_v, i = max(abs(y_sync));
-
-% Equalization
-
-
 z_k = z_Ik + j * z_Qk;
 
 % demodulate (threshold)
 z_demodulated = z_k > 0;
-
-% recover bits
 
 
 % BER
@@ -46,7 +49,7 @@ message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
 bits = transpose(message_vec);
-BER = mean(z_demodulated(1:length(message_vec)) ~= bits);
+BER = mean(z_demodulated(1:length(z_demodulated)) ~= bits(1:length(z_demodulated)));
 disp(['BER is ', num2str(BER)])
 
 % Plot constellation
