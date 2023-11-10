@@ -15,15 +15,16 @@ y_base = receivedsignal;
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
 
 % Synchronization
-y_corr = xcorr(timing_sync_bits, y_base);
+[y_corr, lag] = xcorr(y_base, timing_sync_bits);
 [~, max_index] = max(abs(y_corr));
+timing_offset = lag(max_index);
 
-index = max_index + length(timing_sync_bits) + length(pilot_sequence);
-y_sync = y_base(index:length(y_base));
+index = timing_offset + length(timing_sync_bits) + length(pilot_sequence); % where our signal starts
+y_sync = y_base(index + 1:end); % Check this
 
 % Equalization
-p = y_base((max_index+length(timing_sync_bits)):index-1);
-one_tap = (pilot_sequence*p) / norm(pilot_sequence);
+p = y_base(timing_offset + length(timing_sync_bits) + 1:index); % find the pilot sequence in the transmitted signal
+one_tap = (pilot_sequence*p) / (pilot_sequence*pilot_sequence');
 
 y = y_sync / one_tap;
 
@@ -37,10 +38,10 @@ z_I = conv(y_I, matched_filter);
 z_Q = conv(y_Q, matched_filter);
 
 % Sample
-z_Ik = z_I(1:L:length(z_I));
-z_Qk = z_Q(1:L:length(z_Q));
+z_Ik = z_I(1:L:end);
+z_Qk = z_Q(1:L:end);
 
-z_k = z_Ik + j * z_Qk;
+z_k = z_Ik + 1i * z_Qk;
 
 % demodulate (threshold)
 z_demodulated = z_k > 0;
@@ -51,14 +52,14 @@ message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
 bits = transpose(message_vec);
-BER = mean(z_demodulated(1:length(z_demodulated)) ~= bits(1:length(z_demodulated)));
+BER = mean(z_demodulated(1:length(bits)) ~= bits);
 disp(['BER is ', num2str(BER)])
 
 % Plot constellation
 figure(1)
-stem([1:length(message_vec)], message_vec,'bx')
+stem([1:length(bits)], message_vec,'bx')
 hold on
-stem([1:length(z_demodulated)], z_demodulated,'ro')
+stem([1:length(bits)], z_demodulated(1:length(bits)),'ro')
 legend('x_k', 'z_k')
 xlabel('discrete time k')
 axis tight
