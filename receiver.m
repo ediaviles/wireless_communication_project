@@ -16,14 +16,14 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 
 % Synchronization
 y_corr = xcorr(timing_sync_bits, y_base);
-[max_v, max_index] = max(abs(y_corr));
+[~, max_index] = max(abs(y_corr));
 
 index = max_index + length(timing_sync_bits) + length(pilot_sequence);
 y_sync = y_base(index:length(y_base));
 
 % Equalization
-p = y_base(max_index+length(timing_sync_bits):index-1);
-one_tap = transpose(p) * pilot_sequence / norm(pilot_sequence);
+p = y_base((max_index+length(timing_sync_bits)):index-1);
+one_tap = (pilot_sequence*p) / norm(pilot_sequence);
 
 y = y_sync / one_tap;
 
