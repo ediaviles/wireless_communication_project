@@ -1,14 +1,10 @@
-% sampling freq.:
-Fs = 200 * 10^6;
+sigman = 0.2;
 
-% symbol period:
-T = 1/20 * 10^-6;
-
-% oversampling factor:
-L = floor(Fs*T);
-
-N = 51; % Length of filter in symbol periods.
-Ns = floor(N*L); % Number of filter samples
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%T o test the effect of phase offset and delay, you could simulate such a channel as
+padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(2147,1); transmitsignal'; padding'];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
 y_base = receivedsignal;
 
@@ -39,6 +35,7 @@ y_Q = imag(y);
 
 % filter using matched filter
 matched_filter = fliplr(pt);
+%y_filter = conv(y, matched_filter);
 z_I = conv(y_I, matched_filter);
 z_Q = conv(y_Q, matched_filter);
 
@@ -52,19 +49,15 @@ z_k = z_Ik + j * z_Qk;
 z_demodulated = z_k > 0;
 
 
-% BER
+figure(1)
+plot(real(z_demodulated));
+
 message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
 bits = transpose(message_vec);
+figure(2)
+plot(real(bits));
+
 BER = mean(z_demodulated(1:length(bits)) ~= bits);
 disp(['BER is ', num2str(BER)])
-
-% Plot constellation
-figure(1)
-stem([1:length(bits)], message_vec,'bx')
-hold on
-stem([1:length(bits)], z_demodulated(1:length(bits)),'ro')
-legend('x_k', 'z_k')
-xlabel('discrete time k')
-axis tight

@@ -14,21 +14,25 @@ y_base = receivedsignal;
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
 
-% Synchronization
-y_corr = fftshift(xcorr(y_base, [timing_sync_bits, pilot_sequence]));
-%y_corr = xcorr(timing_sync_bits, y_base);
+% Time Synchronization
+[y_corr, lag] = xcorr( timing_sync_bits, y_base');
 [~, max_index] = max(abs(y_corr));
-%max_index = max_index - length(timing_sync_bits) + 1; % Fix the index calculation
+timing_offset = lag(max_index);
 
-%index = max_index + length(timing_sync_bits) + length(pilot_sequence); % where our signal starts
-y_sync = y_base(max_index - 1:end); % Check this
+y_time_sync = y_base(max_index + (tim) + 1:end); 
 
 % Equalization
-p = y_base(max_index:index-1); % find the pilot sequence in the transmitted signal
-p = conv(p, fliplr(pt), 'same');
+p = y_time_sync(1:length(pilot_sequence)); % find the pilot sequence in the transmitted signal
 one_tap = (pilot_sequence*p) / (pilot_sequence*pilot_sequence');
 
-y = y_sync; %/ one_tap;
+y_eq = y_time_sync / one_tap;
+
+% Frame Synchronization
+[y_fcorr, lags] = xcorr(fsync_bits, y_base');
+[~, max_index] = max(abs(y_fcorr));
+framing_offset = lags(max_index);
+
+y = y_eq(max_index + 1:end);
 
 
 y_I = real(y);
@@ -40,10 +44,10 @@ z_I = conv(y_I, matched_filter);
 z_Q = conv(y_Q, matched_filter);
 
 % Sample
-z_Ik = z_I(1:L:length(z_I));
-z_Qk = z_Q(1:L:length(z_Q));
+z_Ik = z_I(1:L:end);
+z_Qk = z_Q(1:L:end);
 
-z_k = z_Ik + j * z_Qk;
+z_k = z_Ik + 1i * z_Qk;
 
 % demodulate (threshold)
 z_demodulated = z_k > 0;
