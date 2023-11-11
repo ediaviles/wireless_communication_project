@@ -14,13 +14,15 @@ y_base = receivedsignal;
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L)); %need to modify this
 
-% Synchronization
-[y_corr, lag] = xcorr(y_base, timing_sync_bits);
+% Time Synchronization
+[y_corr, lag] = xcorr(y_base, timing_sync_bits');
 [~, max_index] = max(abs(y_corr));
 timing_offset = lag(max_index);
 
-index = timing_offset + length(timing_sync_bits) + length(pilot_sequence); % where our signal starts
-y_sync = y_base(index + 1:end); % Check this
+y_time_sync = y_base(timing_offset + 1:end); 
+
+% Frame synchronization
+
 
 % Equalization
 p = y_base(timing_offset + length(timing_sync_bits) + 1:index); % find the pilot sequence in the transmitted signal
