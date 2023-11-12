@@ -44,7 +44,7 @@ x_Q = conv(xk_Q,  pt);
 
 x_base = x_I + 1j* x_Q;
 
-transmitsignal = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_bits, x_base];
+transmitsignal = [frequency_sync_bits, timing_sync_bits', pilot_sequence', fsync_bits', x_base];
 
 save('transmitsignal.mat','transmitsignal')
 
