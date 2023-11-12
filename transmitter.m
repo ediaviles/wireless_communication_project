@@ -8,7 +8,6 @@ message_vec = reshape(message, 1, []);
 % BPSK:
 
 xk = 2 * message_vec - 1;
-xk = xk * 0.3;
 
 % sampling freq.:
 Fs = 200 * 10^6;
@@ -33,6 +32,11 @@ fsync_bits = (randn(1,100) > 0.5) * 2 - 1;
 
 preamble = [frequency_sync_bits', timing_sync_bits', fsync_bits']; %use this for clarity
 
+% x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
+
+xk = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_bits, xk];
+xk = xk * 0.3;
+
 xk_upsamp = upsample(xk, L);
 
 
@@ -44,7 +48,7 @@ x_Q = conv(xk_Q,  pt);
 
 x_base = x_I + 1j* x_Q;
 
-transmitsignal = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_bits, x_base];
+transmitsignal = x_base;
 
 save('transmitsignal.mat','transmitsignal')
 

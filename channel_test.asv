@@ -1,0 +1,57 @@
+sigman = 0.2;
+
+% add AWGN to the channel
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+
+y = receivedsignal;
+y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
+y_symbols = y_symbols * 0.3;
+
+t = timing_sync_bits * 0.3;
+t = upsample(t, L);
+t = conv(t, fliplr(pt));
+
+% Time sync
+%filter_timing_sync_bits = conv(pt, timing_sync_bits * 0.3);
+%[corr, lags] = xcorr(y, filter_timing_sync_bits);
+[corr, lags] = xcorr(y_symbols, t);
+[~, timing_index] = max(abs(corr));
+timing_offset = lags(timing_index);
+
+% Frame sync
+
+
+
+y_I = real(y);
+y_Q = imag(y);
+
+% filter using matched filter
+matched_filter = fliplr(pt);
+z_I = conv(y_I, matched_filter);
+z_Q = conv(y_Q, matched_filter);
+
+% Sample
+z_Ik = z_I(1:L:end);
+z_Qk = z_Q(1:L:end);
+
+z_k = z_Ik + j * z_Qk;
+
+% demodulate (threshold)
+z_demodulated = z_k > 0;
+
+figure(3);
+plot(real(transmitsignal));
+
+figure(1);
+plot(real(y));
+
+figure(2);
+plot(real(y(timing_offset + 1:end)));
+
+% BER
+message = imread("shannon1440.bmp");
+message_vec = reshape(message, 1, []);
+
+bits = message_vec;
+BER = mean(z_demodulated(1:length(bits)) ~= bits);
+disp(['BER is ', num2str(BER)])

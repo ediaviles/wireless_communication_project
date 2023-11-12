@@ -17,10 +17,8 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 [~, max_index] = max(abs(y_corr));
 timing_offset = lag(max_index);
 
-y_time_sync = y_symbols(timing_offset + length(timing_sync_bits) + 1:end);
-
 % Equalization
-p = y_time_sync(1:length(pilot_sequence)); % find the pilot sequence in the transmitted signal
+p = y_symbols(timing_offset + length(timing_sync_bits) + 1:timing_offset + length(timing_sync_bits) + length(pilot_sequence)); % find the pilot sequence in the transmitted signal
 %p = conv(fliplr(pt), p);
 %ps = p(1:Lend);
 one_tap = (conj(pilot_sequence)*p) / (conj(pilot_sequence)*pilot_sequence');
@@ -43,9 +41,8 @@ y_conv = conv(y, matched_filter);
 z_I = conv(y_I, matched_filter);
 z_Q = conv(y_Q, matched_filter);
 
-y_sample = y_conv(1:L:end);
-
 % Sample
+y_sample = y_conv(1:L:end);
 z_Ik = z_I(1:L:end);
 z_Qk = z_Q(1:L:end);
 
