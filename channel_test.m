@@ -1,11 +1,11 @@
 sigman = 0.2;
 
-%receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
-%padding = (randn(1,1000) > 0.5) * 2 - 1;
-%transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
-%receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
-
+padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+receivedsignal = receivedsignal';
 y = receivedsignal;
 y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
 y_symbols = y_symbols * 0.3;
@@ -30,13 +30,27 @@ ps = conv(ps, fliplr(pt));
 timing_offset = lags(timing_index);
 
 % Eq
-p = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
-%p = conv(p, fliplr(p));
-%one_tap = (conj(ps)*p') / (conj(ps)*ps');
-one_tap = (conj(ps)*p) / (conj(ps)*ps');
+p_1 = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
+one_tap = (conj(ps)*p_1) / (conj(ps)*ps');
 
-y = y / one_tap;
 
+
+y_temp = y_symbols(timing_offset + length(t) + length(ps) + length(f) + 1:end);
+
+[pcorr, plags] = xcorr(y_temp, ps);
+[~, pilot_index] = max(abs(pcorr));
+pilot_offset = lags(pilot_index);
+
+p_2 = y(timing_offset + length(t) + length(ps) + length(f) + pilot_offset + 1 : timing_offset + length(t) + length(ps) + length(f) + pilot_offset + length(ps));
+one_tap2 = (conj(ps)*p_2) / (conj(ps)*ps');
+
+y(timing_offset + length(t) + length(ps) + length(f) + 1:timing_offset + length(t) + length(ps) + length(f) + pilot_offset) = y(timing_offset + length(t) + length(ps) + length(f) + 1: timing_offset + length(t) + length(ps) + length(f) + pilot_offset) / one_tap;
+%y(timing_offset + length(t) + length(ps) + length(f) + 1:end) = y(timing_offset + length(t) + length(ps) + length(f) + 1:end) / one_tap;
+y(timing_offset + length(t) + length(ps) + length(f) + pilot_offset + 1:end) = y(timing_offset + length(t) + length(ps) + length(f) + pilot_offset + 1:end) / one_tap2;
+
+
+y = [y(1:timing_offset + length(t) + length(ps) + length(f) + pilot_offset)', y(timing_offset + length(t) + length(ps) + length(f) + pilot_offset + 1 + length(ps):end)'];
+y = y';
 % Frame sync
 [fcorr, flags] = xcorr(y_symbols, f);
 [~, f_index] = max(abs(fcorr));
