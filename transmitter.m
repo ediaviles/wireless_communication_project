@@ -36,7 +36,7 @@ preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequenc
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
 chunk = ones(1, 1440);
-n = 1;
+n = 1; % number of chunks
 new_xk = [preamble];
 chunk_size = floor(length(xk)/n);
 new_xk = [new_xk, xk(1:chunk_size)]
