@@ -27,15 +27,12 @@ ps = upsample(ps, L);
 ps = conv(ps, fliplr(pt));
 
 % Time sync
-%filter_timing_sync_bits = conv(pt, timing_sync_bits * 0.3);
-%[corr, lags] = xcorr(y, filter_timing_sync_bits);
 [corr, lags] = xcorr(y_symbols, t);
 [~, timing_index] = max(abs(corr));
 timing_offset = lags(timing_index);
 
 % Eq
-p = y_symbols(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
-%p = conv(p, fliplr(p));
+p = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
 one_tap = (conj(ps)*p) / (conj(ps)*ps');
 
 y = y / one_tap;
@@ -70,7 +67,7 @@ z_demodulated = z_k > 0;
 message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
-bits = transpose(message_vec);
+bits = message_vec';
 BER = mean(z_demodulated(1:length(bits)) ~= bits);
 disp(['BER is ', num2str(BER)])
 

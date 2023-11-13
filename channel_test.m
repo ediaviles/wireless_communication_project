@@ -1,10 +1,10 @@
 sigman = 0.2;
 
-receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
-padding = (randn(1,1000) > 0.5) * 2 - 1;
-transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
-receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+%padding = (randn(1,1000) > 0.5) * 2 - 1;
+%transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
+%receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
 y = receivedsignal;
 y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
@@ -30,9 +30,10 @@ ps = conv(ps, fliplr(pt));
 timing_offset = lags(timing_index);
 
 % Eq
-p = y_symbols(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
+p = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
 %p = conv(p, fliplr(p));
-one_tap = (conj(ps)*p') / (conj(ps)*ps');
+%one_tap = (conj(ps)*p') / (conj(ps)*ps');
+one_tap = (conj(ps)*p) / (conj(ps)*ps');
 
 y = y / one_tap;
 
@@ -57,23 +58,27 @@ z_Ik = z_I(1:L:end);
 z_Qk = z_Q(1:L:end);
 
 z_k = z_Ik + j * z_Qk;
+%z_k = -z_k;
+
 
 % demodulate (threshold)
 z_demodulated = z_k > 0;
 
 figure(3);
-plot(real(transmitsignal));
+plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
 
 figure(1);
-plot(real(y));
+plot(real(receivedsignal), imag(receivedsignal), 'rx');
 
 figure(2);
-plot(real(y(timing_offset + 1:end)));
+plot(real(y(f_offset + length(f) + 1:end)));
 
 % BER
 message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
-bits = message_vec;
+bits = message_vec';
+figure(2);
+plot(real(bits));
 BER = mean(z_demodulated(1:length(bits)) ~= bits);
 disp(['BER is ', num2str(BER)])
