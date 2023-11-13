@@ -25,32 +25,31 @@ Ns = floor(N*L); % Number of filter samples
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
 frequency_sync_bits = ones(1, 100);
-rng(42);
+rng(5);
 timing_sync_bits = (randn(1,100) > 0.5) * 2 - 1;
 pilot_sequence = (randn(1, 100) > 0.5) * 2 - 1;
-fsync_bits = (randn(1,100) > 0.5) * 2 - 1;
+fsync_sequence = (randn(1, 100) > 0.5) * 2 - 1;
 
-preamble = [frequency_sync_bits', timing_sync_bits', fsync_bits']; %use this for clarity
+
+
+preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequence]; %use this for clarity
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
-xk_1 = xk(1:floor(length(xk)/2));
-xk_2 = xk(floor(length(xk)/2) + 1:end);
+chunk = ones(1, 1440);
+n = 1;
+new_xk = [preamble];
+chunk_size = floor(length(xk)/n);
+new_xk = [new_xk, xk(1:chunk_size)]
+for i = 1:1:n-1
+    chunk = xk((i) * chunk_size + 1:(i) * chunk_size + chunk_size);
+    new_xk = [new_xk, pilot_sequence, chunk];
+end
 
-xk = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_bits, xk_1, pilot_sequence, xk_2];
-xk = xk * 0.3;
+xk = new_xk * 0.3;
+xk = upsample(xk, L);
+xk = conv(xk, pt);
 
-xk_upsamp = upsample(xk, L);
-
-
-xk_I = real(xk_upsamp);
-xk_Q = imag(xk_upsamp);
-
-x_I = conv(xk_I,  pt);
-x_Q = conv(xk_Q,  pt);
-
-x_base = x_I + 1j* x_Q;
-
-transmitsignal = x_base;
+transmitsignal = xk;
 
 save('transmitsignal.mat','transmitsignal')
 

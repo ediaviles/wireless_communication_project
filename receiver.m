@@ -18,10 +18,6 @@ t = timing_sync_bits * 0.3;
 t = upsample(t, L);
 t = conv(t, fliplr(pt));
 
-f = fsync_bits * 0.3;
-f = upsample(f, L);
-f = conv(f, fliplr(pt));
-
 ps = pilot_sequence * 0.3;
 ps = upsample(ps, L);
 ps = conv(ps, fliplr(pt));
@@ -30,20 +26,29 @@ ps = conv(ps, fliplr(pt));
 [corr, lags] = xcorr(y_symbols, t);
 [~, timing_index] = max(abs(corr));
 timing_offset = lags(timing_index);
+delta = timing_offset + length(t); % determine the start of the first pilot
 
-% Eq
-p = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
-one_tap = (conj(ps)*p) / (conj(ps)*ps');
+% Equalize based on number of chunks (n) and remove pilots from message
+message = [];
+for i = i:n
+    % extract nth pilot
+    pilot = y(delta + 1:delta + length(ps));
 
-y = y / one_tap;
+    % calculate one tap
+    one_tap = (conj(ps)*pilot) / (conj(ps)*ps');
 
-% Frame sync
-[fcorr, flags] = xcorr(y_symbols, f);
-[~, f_index] = max(abs(fcorr));
-f_offset = flags(f_index);
+    % equalize only that chunk
+    start_of_chunk = delta + length(ps);
+    equalized_chunk = y(start_of_chunk + 1:start_of_chunk + chunk_size) / one_tap;
 
-y = y(f_offset + length(f) + 1:end);
+    % add equalized chunk to message
+    message = [message, equalized_chunk];
 
+    % update delta to start of next pilot sequence
+    delta = start_of_chunk + chunk_size;
+end
+
+y = message;
 
 y_I = real(y);
 y_Q = imag(y);
