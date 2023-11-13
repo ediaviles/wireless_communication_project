@@ -49,7 +49,7 @@ filter_first_chunk = conv(first_chunk, fliplr(pt));
 sample_first_chunk = filter_first_chunk(1:L:end);
 
 one_tap = (conj(ps)*first_pilot') / (conj(ps)*ps');
-sample_first_chunk = sample_first_chunk / one_tap;
+sample_first_chunk = sample_first_chunk * one_tap;
 
 delta = start_first_chunk + chunk_size;
 
