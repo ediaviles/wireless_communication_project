@@ -1,12 +1,12 @@
 sigman = 0.2;
 
-%receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
-%padding = (randn(1,1000) > 0.5) * 2 - 1;
-%transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
-%receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
-y = receivedsignal;
+y = receivedsignal';
 y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
 y_symbols = y_symbols * 0.3;
 
