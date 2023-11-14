@@ -27,7 +27,7 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 frequency_sync_bits = ones(1, 100);
 rng(5);
 timing_sync_bits = (randn(1,100) > 0.5) * 2 - 1;
-pilot_sequence = (randn(1, 100) > 0.5) * 2 - 1;
+pilot_sequence = (randn(1, 50) > 0.5) * 2 - 1;
 fsync_sequence = (randn(1, 100) > 0.5) * 2 - 1;
 
 
@@ -36,7 +36,7 @@ preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequenc
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
 chunk = ones(1, 1440);
-n = 1; % number of chunks
+n = 2; % number of chunks
 new_xk = [preamble];
 chunk_size = floor(length(xk)/n);
 new_xk = [new_xk, xk(1:chunk_size)]
