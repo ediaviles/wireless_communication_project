@@ -10,7 +10,7 @@ L = floor(Fs*T);
 N = 51; % Length of filter in symbol periods.
 Ns = floor(N*L); % Number of filter samples
 
-y = receivedsignal;
+y = receivedsignal';
 
 t = timing_sync_bits * 0.3;
 t = upsample(t, L);
