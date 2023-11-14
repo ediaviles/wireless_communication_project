@@ -7,8 +7,6 @@ transmitsignalwithdelay = [zeros(1, 2147), transmitsignal, padding];
 receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
 y = receivedsignal;
-y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
-y_symbols = y_symbols * 0.3;
 
 t = timing_sync_bits * 0.3;
 t = upsample(t, L);
@@ -22,17 +20,20 @@ f = fsync_sequence * 0.3;
 f = upsample(f, L);
 f = conv(f, fliplr(pt));
 
-
 chunk_size = chunk * 0.3;
-chunk_size = upsample(chunk_size, L);
-chunk_size = conv(chunk_size, fliplr(pt));
-chunk_size = length(chunk_size);
+%chunk_size = upsample(chunk_size, L);
+%chunk_size = length(chunk_size);
+%chunk_size = conv(chunk_size, fliplr(pt));
+chunk_size = length(chunk_size) * L;
+
 
 % Time sync
 [corr, lags] = xcorr(y, t); % look at class slides which is based on analog signal
 [~, timing_index] = max(abs(corr));
 timing_offset = lags(timing_index);
 delta = timing_offset + length(t); % determine the start of the first pilot
+
+y_synced = y(delta + 1:end);
 
 first_pilot = y(delta + 1: delta + length(ps)); % extract first pilot
 
@@ -48,6 +49,7 @@ first_chunk = y(start_first_chunk + 1 : start_first_chunk + chunk_size);
 filter_first_chunk = conv(first_chunk, fliplr(pt));
 sample_first_chunk = filter_first_chunk(1:L:end);
 
+% Equalizer
 one_tap = (conj(ps)*first_pilot') / (conj(ps)*ps');
 sample_first_chunk = sample_first_chunk * one_tap;
 
@@ -74,7 +76,7 @@ for i = 1:1:n-1
     sampled_chunk = filtered_chunk(1:L:end);
 
     % Equalize chunk
-    equalized_chunk = sampled_chunk / one_tap; % This should be applied after sampling
+    equalized_chunk = sampled_chunk * one_tap; % This should be applied after sampling
 
     % add equalized chunk to message
     equalized_message = [equalized_message, equalized_chunk];
@@ -97,9 +99,34 @@ bits = message_vec;
 BER = mean(z_demodulated(1:length(bits)) ~= bits);
 disp(['BER is ', num2str(BER)])
 
-figure(3);
+recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+imshow(recovered_image);
+
+figure(11);
 plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
 
-figure(1);
+figure(12);
 plot(real(receivedsignal), imag(receivedsignal), 'rx');
 
+t_synced = [1:length(y_synced)] / Fs * 10^6;
+
+figure(13)
+clf
+subplot(2,1,1)
+plot(t_synced, real(y_synced),'b')
+hold on
+plot(t_synced, imag(y_synced),'r')
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2);
+plot(([0:length(y_synced)-1]/length(y_synced)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
+
+figure(14)
+clf
+subplot(2,1,1);
+plot(z_demodulated(1:length(bits)), 'r');
+subplot(2,1,2);
+plot(bits, 'b')

@@ -13,7 +13,7 @@ xk = 2 * message_vec - 1;
 Fs = 200 * 10^6;
 
 % symbol period:
-T = 1/20 * 10^-6;
+T = 1/20 * 10^-6; % 1/T is sampling rate without oversampling, since we oversample by L, then the sampling rate becomes 200 MHz from transmitter
 
 % oversampling factor:
 L = floor(Fs*T);
@@ -58,6 +58,7 @@ load receivedsignal.mat
 % X axis values for plots %
 t_transmitted = [1:length(transmitsignal)] / Fs * 10^6;
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
+t_p = [-floor(Ns/2):Ns-floor(Ns/2)-1]*T*10^6/(L);
 
 
 figure(1)
@@ -88,3 +89,15 @@ subplot(2,1,2)
 plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
 ylabel('abs(Y(f))')
 xlabel('Frequency in MHz')
+
+figure(3)
+clf
+subplot(2,1,1);
+plot(t_p, pt, 'b');
+xlabel('Time in microseconds');
+ylabel('Pulse function p(t)');
+hold on;
+subplot(2,1,2);
+plot(([0:length(pt)-1]/length(pt)-0.5) * Fs / 10^6, abs(fftshift(fft(pt))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
