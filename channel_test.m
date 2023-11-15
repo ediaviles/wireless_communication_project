@@ -33,7 +33,7 @@ y_downsampled = y(Ns:L:end);
 %% Time sync
 [corr, lags] = xcorr(y_downsampled, t); % look at class slides which is based on analog signal
 [max_value, timing_index] = max(abs(corr));
-timing_offset = timing_index;%lags(timing_index); % seems good
+timing_offset = lags(timing_index); % seems good
 phase = angle(max_value);
 delta = timing_offset + length(t); % determine the start of the first pilot
 
@@ -45,7 +45,7 @@ first_pilot = y_synced(1:length(ps)); % extract first pilot
 %% Frame sync
 [fcorr, flags] = xcorr(y_synced, f);
 [~, frame_index] = max(abs(fcorr));
-frame_offset = frame_index;
+frame_offset = lags(frame_index);
 
 start_first_chunk = frame_offset + length(f);
 y_fsynced = y_synced(start_first_chunk + 1:end);
