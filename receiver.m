@@ -10,7 +10,9 @@ L = floor(Fs*T);
 N = 51; % Length of filter in symbol periods.
 Ns = floor(N*L); % Number of filter samples
 
-y = receivedsignal;
+matched_filter = flipud(pt);
+
+y = receivedsignal';
 
 t = timing_sync_bits * 0.46;
 
@@ -53,10 +55,9 @@ y_fsynced = y_downsampled(start_first_chunk+1:end);
 first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
-channel_effect = abs(first_pilot)/abs(ps);
-h0=mean(abs(channel_effect));
+one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
 
-first_chunk = first_chunk / h0;
+first_chunk = first_chunk * one_tap;
 
 delta = chunk_size;
 
@@ -68,14 +69,13 @@ for i = 1:1:n-1
     pilot = y_fsynced(delta + 1:delta + length(ps));
 
     % calculate one tap
-    channel_effect = abs(pilot)/abs(ps);
-    h0 = mean(abs(channel_effect));
+    one_tap = (pilot*conj(ps)') * (conj(ps)*ps');
 
     start_of_chunk = delta + length(ps);
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
 
     % Equalize chunk
-    equalized_chunk = current_chunk / h0; % This should be applied after sampling
+    equalized_chunk = current_chunk / one_tap; % This should be applied after sampling
 
     % add equalized chunk to message
     equalized_message = [equalized_message, equalized_chunk];
