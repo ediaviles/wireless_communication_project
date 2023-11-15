@@ -6,7 +6,6 @@ padding = (randn(1,1000) > 0.5) * 2 - 1;
 transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
 receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 %receivedsignal = transmitsignal;
-matched_filter = flipud(pt);
 
 y = receivedsignal;
 
