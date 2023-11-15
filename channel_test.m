@@ -6,6 +6,7 @@ padding = (randn(1,1000) > 0.5) * 2 - 1;
 transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
 receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 %receivedsignal = transmitsignal;
+matched_filter = flipud(pt);
 
 y = receivedsignal;
 
@@ -19,15 +20,15 @@ chunk_size = chunk * 0.46;
 chunk_size = length(chunk_size);
 
 
-% Demodulate
-matched_filter = flipud(pt);
-y = conv(matched_filter, y);
+%% Filter
+y = conv(y, matched_filter);
 
-% Downsample
+%% Downsample
 tau = mod(length(y), L);
+y_synced2 = y(tau +1:end);
 y_downsampled = y(tau + 1:L:end);
 
-% Time sync
+%% Time sync
 [corr, lags] = xcorr(y_downsampled, t); % look at class slides which is based on analog signal
 [max_value, timing_index] = max(abs(corr));
 timing_offset = lags(timing_index);
@@ -39,7 +40,7 @@ y_synced = y_downsampled(delta + 1:end);
 
 first_pilot = y_downsampled(delta + 1:delta + length(ps)); % extract first pilot
 
-% Frame sync
+%% Frame sync
 [fcorr, flags] = xcorr(y_downsampled, f);
 [~, frame_index] = max(abs(fcorr));
 frame_offset = lags(frame_index);
@@ -49,7 +50,7 @@ y_fsynced = y_downsampled(start_first_chunk+1:end);
 
 first_chunk = y_fsynced(1:chunk_size);
 
-% Equalizer
+%% Equalizer
 channel_effect = abs(first_pilot)/abs(ps);
 h0=mean(abs(channel_effect));
 
@@ -57,7 +58,7 @@ first_chunk = first_chunk / h0;
 
 delta = chunk_size;
 
-% Equalize based on number of chunks (n) and remove pilots from message
+%% Equalize based on number of chunks (n) and remove pilots from message
 equalized_message = [first_chunk];
 
 for i = 1:1:n-1
@@ -83,12 +84,12 @@ end
 
 z_k = equalized_message;
 
-% demodulate (threshold)
+%% demodulate (threshold)
 z_real = real(z_k);
 z_demodulated = z_real > 0;
 
 
-% BER
+%% BER
 message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
@@ -111,6 +112,7 @@ figure(12);
 plot(real(receivedsignal), imag(receivedsignal));
 
 t_synced = [1:length(y_synced)] / Fs * 10^6;
+t_downsampled = [1:length(y_downsampled)] / Fs * 10^6;
 
 figure(13)
 clf
@@ -132,3 +134,33 @@ subplot(2,1,1);
 plot(z_demodulated(1:length(bits)), 'r');
 subplot(2,1,2);
 plot(bits, 'b')
+
+figure(15)
+clf
+subplot(2,1,1)
+plot(t_downsampled, real(y_downsampled),'b')
+hold on
+plot(t_downsampled, imag(y_downsampled),'r')
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2);
+plot(([0:length(y_downsampled)-1]/length(y_downsampled)-0.5) * Fs / 10^6, abs(fftshift(fft(y_downsampled))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
+
+t_16 = [1:length(y_synced2)] / Fs * 10^6;
+
+figure(16)
+clf
+subplot(2,1,1)
+plot(t_16, real(y_synced2),'b')
+hold on
+plot(t_16, imag(y_synced2),'r')
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2);
+plot(([0:length(y_synced2)-1]/length(y_synced2)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced2))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
