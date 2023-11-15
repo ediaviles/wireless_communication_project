@@ -29,7 +29,7 @@ y = conv(y, matched_filter);
 
 %% Downsample
 tau = mod(length(y), L);
-y_synced2 = y(tau +1:end);
+y_synced2 = y(tau + 1:end);
 y_downsampled = y(tau + 1:L:end);
 
 %% Time sync

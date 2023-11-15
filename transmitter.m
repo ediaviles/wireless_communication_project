@@ -25,7 +25,7 @@ Ns = floor(N*L); % Number of filter samples
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
 frequency_sync_bits = ones(1, 100);
-rng(3);
+rng(5);
 timing_sync_bits = (randn(1,100) > 0.5) * 2 - 1;
 pilot_sequence = (randn(1, 20) > 0.5) * 2 - 1;
 fsync_sequence = (randn(1, 100) > 0.5) * 2 - 1;
