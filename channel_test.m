@@ -52,15 +52,16 @@ first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
 one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
+equalizations = [one_tap];
 
-before_equalization = sample_first_chunk;
+%before_equalization = sample_first_chunk;
 
-first_chunk = first_chunk / one_tap;
+%first_chunk = first_chunk; % / one_tap;
 
 delta = chunk_size;
 
 %% Equalize based on number of chunks (n) and remove pilots from message
-equalized_message = [first_chunk];
+chunks = [first_chunk];
 
 for i = 1:1:n-1
     % extract nth pilot
@@ -68,21 +69,27 @@ for i = 1:1:n-1
 
     % calculate one tap
     one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
+    equalizations = [equalizations, one_tap];
 
     start_of_chunk = delta + length(ps);
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
 
     % Equalize chunk
-    equalized_chunk = current_chunk / one_tap; % This should be applied after sampling
+    chunk = current_chunk; % / one_tap; % This should be applied after sampling
 
     % add equalized chunk to message
-    equalized_message = [equalized_message, equalized_chunk];
+    chunks = [chunks, chunk];
     
     % update delta to start of next pilot sequence
     delta = start_of_chunk + chunk_size;
 end
 
-z_k = equalized_message;
+before_equalizations = chunks;
+for i = 1:n
+    chunks((i - 1)*chunk_size + 1:i*chunk_size) = chunks((i - 1)*chunk_size + 1:i*chunk_size) / equalizations(i);
+end
+
+z_k = chunks;
 
 %% demodulate (threshold)
 z_real = real(z_k);
@@ -107,7 +114,7 @@ imshow(message);
 
 % zk
 figure(11);
-plot(real(before_equalization), imag(before_equalization), 'rx')
+plot(real(before_equalizations), imag(before_equalizations), 'rx')
 
 % vk
 figure(12);
@@ -139,12 +146,6 @@ plot(z_demodulated(1:length(bits)), 'r');
 subplot(2,1,2);
 plot(bits, 'b')
 
-
-figure(11);
-plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
-
-figure(12);
-plot(real(receivedsignal), imag(receivedsignal));
 
 t_synced = [1:length(y_synced)] / Fs * 10^6;
 t_downsampled = [1:length(y_downsampled)] / Fs * 10^6;
