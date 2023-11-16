@@ -12,9 +12,10 @@ Ns = floor(N*L); % Number of filter samples
 
 matched_filter = flipud(pt);
 
-y = receivedsignal';
+y_base = receivedsignal;
 
 t = timing_sync_bits * 0.46;
+t_analog = conv(t, pt);
 
 ps = pilot_sequence * 0.46;
 
@@ -23,33 +24,36 @@ f = fsync_sequence * 0.46;
 chunk_size = chunk * 0.46;
 chunk_size = length(chunk_size);
 
+preamble_analog = conv(preamble, pt);
+preamble_analog = upsample(preamble_analog, L);
+
 
 %% Filter
-y = conv(y, matched_filter);
+y = conv(y_base, matched_filter);
 
-%% Downsample
-tau = mod(length(y), L);
-y_synced2 = y(tau +1:end);
-y_downsampled = y(tau + 1:L:end);
 
 %% Time sync
-[corr, lags] = xcorr(y_downsampled, t); % look at class slides which is based on analog signal
+[corr, lags] = xcorr(y_base, preamble_analog); % look at class slides which is based on analog signal
 [max_value, timing_index] = max(abs(corr));
 timing_offset = lags(timing_index);
 phase = angle(max_value);
-delta = timing_offset + length(t); % determine the start of the first pilot
+delta = timing_offset + length(frequency_sync_bits)*L + length(t)*L; % determine the start of the first pilot
 
-y_synced = y_downsampled(delta + 1:end);
+y_synced = y(delta + 1:end);
 %y_synced = y_synced * exp(-j*phase);
 
-first_pilot = y_downsampled(delta + 1:delta + length(ps)); % extract first pilot
+
+%% Downsample
+y_downsampled = y_synced(1:L:end);
+
+first_pilot = y_downsampled(1:length(ps)); % extract first pilot
 
 %% Frame sync
-[fcorr, flags] = xcorr(y_downsampled, f);
-[~, frame_index] = max(abs(fcorr));
-frame_offset = lags(frame_index);
+%[fcorr, flags] = xcorr(y_downsampled, f);
+%[~, frame_index] = max(abs(fcorr));
+%frame_offset = lags(frame_index);
 
-start_first_chunk = frame_offset + length(f);
+start_first_chunk = length(ps) + length(f);
 y_fsynced = y_downsampled(start_first_chunk+1:end);
 
 first_chunk = y_fsynced(1:chunk_size);
@@ -57,7 +61,7 @@ first_chunk = y_fsynced(1:chunk_size);
 %% Equalizer
 one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
 
-first_chunk = first_chunk * one_tap;
+first_chunk = first_chunk / one_tap;
 
 delta = chunk_size;
 

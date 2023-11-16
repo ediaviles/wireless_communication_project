@@ -1,14 +1,14 @@
 sigman = 0.2;
 
-receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
-padding = (randn(1,1000) > 0.5) * 2 - 1;
-transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
-receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+%padding = (randn(1,1000) > 0.5) * 2 - 1;
+%transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
+%receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 %receivedsignal = transmitsignal;
 matched_filter = flipud(pt);
 
-y = receivedsignal;
+y = receivedsignal';
 
 t = timing_sync_bits * 0.46;
 
@@ -26,7 +26,7 @@ y = conv(y, matched_filter);
 %% Downsample
 tau = mod(length(y), L);
 y_synced2 = y(tau +1:end);
-y_downsampled = y(tau + 1:L:end);
+y_downsampled = y(1:L:end);
 
 %% Time sync
 [corr, lags] = xcorr(y_downsampled, t); % look at class slides which is based on analog signal
@@ -51,10 +51,9 @@ y_fsynced = y_downsampled(start_first_chunk+1:end);
 first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
-channel_effect = abs(first_pilot)/abs(ps);
-h0=mean(abs(channel_effect));
+one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
 
-first_chunk = first_chunk / h0;
+first_chunk = first_chunk / one_tap;
 
 delta = chunk_size;
 
@@ -66,14 +65,13 @@ for i = 1:1:n-1
     pilot = y_fsynced(delta + 1:delta + length(ps));
 
     % calculate one tap
-    channel_effect = abs(pilot)/abs(ps);
-    h0 = mean(abs(channel_effect));
+    one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
 
     start_of_chunk = delta + length(ps);
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
 
     % Equalize chunk
-    equalized_chunk = current_chunk / h0; % This should be applied after sampling
+    equalized_chunk = current_chunk / one_tap; % This should be applied after sampling
 
     % add equalized chunk to message
     equalized_message = [equalized_message, equalized_chunk];
