@@ -105,27 +105,73 @@ bits = message_vec;
 BER = mean(z_demodulated ~= bits);
 disp(['BER is ', num2str(BER)])
 
-figure(7)
+
+%% Plots
+
+% transmited and received signals and pt
+figure(1)
+clf
+subplot(2,1,1)
+plot(t_transmitted, real(transmitsignal),'b')
+hold on
+plot(t_transmitted, imag(transmitsignal),'r')
+legend('real','imag')
+ylabel('xI(t)  and  xQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2)
+plot(t_received, real(receivedsignal),'b')
+hold on
+plot(t_received, imag(receivedsignal),'r')
+zoom xon
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+
+figure(2)
+clf
+subplot(2,1,1)
+plot(([0:length(transmitsignal)-1]/length(transmitsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(transmitsignal))))
+ylabel('abs(X(f))')
+xlabel('Frequency in MHz')
+subplot(2,1,2)
+plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
+ylabel('abs(Y(f))')
+xlabel('Frequency in MHz')
+
+figure(3)
+clf
+subplot(2,1,1);
+plot(t_p, pt, 'b');
+xlabel('Time in microseconds');
+ylabel('Pulse function p(t)');
+hold on;
+subplot(2,1,2);
+plot(([0:length(pt)-1]/length(pt)-0.5) * Fs / 10^6, abs(fftshift(fft(pt))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
+
+
+% recovered image
+figure(4)
 subplot(2,1,1);
 recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
 imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 
-% zk
-figure(11);
+% zk - before equalization
+figure(5);
 plot(real(before_equalizations), imag(before_equalizations), 'rx')
 
-% vk
-figure(12);
+% vk - after equalization
+figure(6);
 plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
 
-%figure(11);
-%plot(real(receivedsignal), imag(receivedsignal), 'rx');
 
 t_synced = [1:length(y_synced)] / Fs * 10^6;
 
-figure(13)
+% y after time synchronization
+figure(7)
 clf
 subplot(2,1,1)
 plot(t_synced, real(y_synced),'b')
@@ -139,7 +185,8 @@ plot(([0:length(y_synced)-1]/length(y_synced)-0.5) * Fs / 10^6, abs(fftshift(fft
 xlabel('Frequency in MHz');
 ylabel('abs(P(f))');
 
-figure(14)
+% z demodulated
+figure(8)
 clf
 subplot(2,1,1);
 plot(z_demodulated(1:length(bits)), 'r');
@@ -147,36 +194,4 @@ subplot(2,1,2);
 plot(bits, 'b')
 
 
-t_synced = [1:length(y_synced)] / Fs * 10^6;
-t_downsampled = [1:length(y_downsampled)] / Fs * 10^6;
 
-
-figure(15)
-clf
-subplot(2,1,1)
-plot(t_downsampled, real(y_downsampled),'b')
-hold on
-plot(t_downsampled, imag(y_downsampled),'r')
-legend('real','imag')
-ylabel('yI(t)  and  yQ(t)')
-xlabel('Time in microseconds')
-subplot(2,1,2);
-plot(([0:length(y_downsampled)-1]/length(y_downsampled)-0.5) * Fs / 10^6, abs(fftshift(fft(y_downsampled))))
-xlabel('Frequency in MHz');
-ylabel('abs(P(f))');
-
-t_16 = [1:length(y_synced2)] / Fs * 10^6;
-
-figure(16)
-clf
-subplot(2,1,1)
-plot(t_16, real(y_synced2),'b')
-hold on
-plot(t_16, imag(y_synced2),'r')
-legend('real','imag')
-ylabel('yI(t)  and  yQ(t)')
-xlabel('Time in microseconds')
-subplot(2,1,2);
-plot(([0:length(y_synced2)-1]/length(y_synced2)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced2))))
-xlabel('Frequency in MHz');
-ylabel('abs(P(f))');
