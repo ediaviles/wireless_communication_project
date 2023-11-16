@@ -53,6 +53,8 @@ first_chunk = y_fsynced(1:chunk_size);
 %% Equalizer
 one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
 
+before_equalization = sample_first_chunk;
+
 first_chunk = first_chunk / one_tap;
 
 delta = chunk_size;
@@ -103,14 +105,18 @@ imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 
+% zk
 figure(11);
+plot(real(before_equalization), imag(before_equalization), 'rx')
+
+% vk
+figure(12);
 plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
 
-figure(12);
-plot(real(receivedsignal), imag(receivedsignal));
+%figure(11);
+%plot(real(receivedsignal), imag(receivedsignal), 'rx');
 
 t_synced = [1:length(y_synced)] / Fs * 10^6;
-t_downsampled = [1:length(y_downsampled)] / Fs * 10^6;
 
 figure(13)
 clf
@@ -132,6 +138,17 @@ subplot(2,1,1);
 plot(z_demodulated(1:length(bits)), 'r');
 subplot(2,1,2);
 plot(bits, 'b')
+
+
+figure(11);
+plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
+
+figure(12);
+plot(real(receivedsignal), imag(receivedsignal));
+
+t_synced = [1:length(y_synced)] / Fs * 10^6;
+t_downsampled = [1:length(y_downsampled)] / Fs * 10^6;
+
 
 figure(15)
 clf
