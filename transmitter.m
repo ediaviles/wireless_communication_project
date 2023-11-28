@@ -40,7 +40,7 @@ Ns = floor(N*L); % Number of filter samples
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
 frequency_sync_bits = ones(1, 100);
-rng(5);
+rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
 pilot_sequence = (randn(1, 32) > 0.5);
 % modulate pilot
@@ -89,7 +89,7 @@ for i = 1:1:n-1
     new_xk = [new_xk, modulated_pilot, chunk];
 end
 
-xk = new_xk * 0.35;
+xk = new_xk * 0.3;
 xk = upsample(xk, L);
 xk = conv(xk, pt);
 

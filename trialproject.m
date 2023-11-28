@@ -1,24 +1,66 @@
+sigman = 0.2;
+
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%T o test the effect of phase offset and delay, you could simulate such a channel as
+%padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+
+
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
-matched_filter = flipud(pt);
+matched_filter = fliplr(pt);
 
-y = receivedsignal';
+y = receivedsignal;
 
-t = timing_sync_bits * 0.46;
+t = timing_sync_bits;
+% modulate t
+t_modulated = ones(1, length(t)/b)
+for i = 1:length(t_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = t(start_i:end_i);
+    
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
 
-ps = pilot_sequence * 0.46;
+    % QAM modulation
+    t_modulated(i) = qammod(decimal_value, M);
+end
+t = t_modulated * 0.3;
 
-f = fsync_sequence * 0.46;
 
-chunk_size = chunk * 0.46;
+ps = pilot_sequence * 0.3;
+
+% modulate f
+f = fsync_sequence;
+% modulate t
+f_modulated = ones(1, length(f)/b)
+for i = 1:length(f_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = f(start_i:end_i);
+    
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
+
+    % QAM modulation
+    f_modulated(i) = qammod(decimal_value, M);
+end
+f = f_modulated * 0.3;
+f = upsample(f, L);
+f = conv(f, pt);
+f = f(1:L:end);
+
+chunk_size = chunk * 0.3;
 chunk_size = length(chunk_size);
 
-%%
-%t = upsample(t, L);
-%t = conv(t, pt);
+%% Time sync
+t = upsample(t, L);
+t = conv(t, pt);
 
-ideal = xk(1001:2000);
-%ideal = t;
+%ideal = xk(1001:2000);
+ideal = t;
 [corr_id, lags_id] = xcorr(y, ideal);
 [ideal_max_value, ideal_timing_index] = max(abs(corr_id));
 ideal_timing_offset = lags_id(ideal_timing_index);
@@ -34,14 +76,14 @@ plot(imag(y_sync),'r')
 %% Filter
 y_filt = conv(y_sync, matched_filter);
 
-%%
+%% DOWNSAMPLE
 z_k = y_filt(1:L:end);
 
 
 %%
-delta = ideal_timing_offset + 100;
+delta = ideal_timing_offset + length(t)/L;
 delta = delta / L;
-first_pilot = z_k(delta + 1:delta + length(ps));
+first_pilot = z_k(delta + 1:delta + length(ps)/b);
 
 y_synced = z_k(delta + 1:end);
 %% 
@@ -82,7 +124,7 @@ first_chunk = y_fsynced(1:chunk_size);
 %first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
-one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
+one_tap = (first_pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
 equalizations = [one_tap];
 
 %before_equalization = sample_first_chunk;
@@ -96,13 +138,13 @@ chunks = [first_chunk];
 
 for i = 1:1:n-1
     % extract nth pilot
-    pilot = y_fsynced(delta + 1:delta + length(ps));
+    pilot = y_fsynced(delta + 1:delta + length(ps)/b);
 
     % calculate one tap
-    one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
+    one_tap = (pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
     equalizations = [equalizations, one_tap];
 
-    start_of_chunk = delta + length(ps);
+    start_of_chunk = delta + length(ps)/b;
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
 
     % Equalize chunk
@@ -123,9 +165,16 @@ end
 z_k = chunks;
 
 %% demodulate (threshold)
-z_real = real(z_k);
-z_demodulated = z_real > 0;
-
+z_demodulated = qamdemod(z_k, M);
+guess = ones(1, length(z_demodulated) * b);
+for i = 1:length(z_demodulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    decimal = z_demodulated(i);
+    binary = de2bi(decimal);
+    guess(start_i:end_i) = binary;
+end
+z_demodulated = guess;
 
 %% BER
 message = imread("shannon1440.bmp");
@@ -196,7 +245,7 @@ plot(real(before_equalizations), imag(before_equalizations), 'rx')
 
 % vk - after equalization
 figure(6);
-plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
+plot(real(z_k(1:1440/b)), imag(z_k(1:1440/b)), 'rx');
 
 y_synced = y_sync;
 

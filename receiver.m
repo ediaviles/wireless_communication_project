@@ -12,11 +12,37 @@ matched_filter = flipud(pt);
 
 y = receivedsignal;
 
-t = timing_sync_bits * 0.3;
+t = timing_sync_bits;
+t_modulated = ones(1, length(t)/b);
+for i = 1:length(t_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = t(start_i:end_i);
+    
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
+
+    % QAM modulation
+    t_modulated(i) = qammod(decimal_value, M);
+end
+t = t_modulated * 0.3;
 
 ps = pilot_sequence * 0.3;
 
-f = fsync_sequence * 0.3;
+f = fsync_sequence;
+% f_modulated = ones(1, length(f));
+% for i = 1:length(f_modulated)
+%     start_i = b*(i - 1) + 1
+%     end_i = b*(i)
+%     grouping = f(start_i:end_i);
+% 
+%     % Convert binary grouping to decimal
+%     decimal_value = bi2de(grouping, 'left-msb');
+% 
+%     % QAM modulation
+%     f_modulated(i) = qammod(decimal_value, M);
+% end
+% f = f_modulated * 0.3;
 
 chunk_size = chunk * 0.3;
 chunk_size = length(chunk_size);

@@ -1,85 +1,224 @@
-% sampling freq.:
-Fs = 200 * 10^6;
+sigman = 0.2;
 
-% symbol period:
-T = 1/20 * 10^-6;
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%T o test the effect of phase offset and delay, you could simulate such a channel as
+%padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
-% oversampling factor:
-L = floor(Fs*T);
 
-N = 51; % Length of filter in symbol periods.
-Ns = floor(N*L); % Number of filter samples
+
+matched_filter = flipud(pt);
 
 y = receivedsignal;
-y_symbols = (receivedsignal > 0) * 2 - 1; % turn to symbols
-y_symbols = y_symbols * 0.3;
 
 t = timing_sync_bits * 0.3;
-t = upsample(t, L);
-t = conv(t, fliplr(pt));
+t_modulated = ones(1, length(t)/b);
+for i = 1:length(t_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = t(start_i:end_i);
+    
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
 
-f = fsync_bits * 0.3;
-f = upsample(f, L);
-f = conv(f, fliplr(pt));
+    % QAM modulation
+    t_modulated(i) = qammod(decimal_value, M);
+end
+t = t_modulated;
 
 ps = pilot_sequence * 0.3;
-ps = upsample(ps, L);
-ps = conv(ps, fliplr(pt));
 
-% Time sync
-[corr, lags] = xcorr(y_symbols, t);
-[~, timing_index] = max(abs(corr));
-timing_offset = lags(timing_index);
-delta = timing_offset + l
-
-% Equalize based on number of chunks (n)
-for i = i:n
+f = fsync_sequence * 0.3;
+f_modulated = ones(1, length(f));
+for i = 1:length(f_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = f(start_i:end_i);
     
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
+
+    % QAM modulation
+    f_modulated(i) = qammod(decimal_value, M);
 end
-p = y(timing_offset + length(t) + 1:timing_offset + length(t) + length(ps)); % find the pilot sequence in the transmitted signal
-one_tap = (conj(ps)*p) / (conj(ps)*ps');
-
-y = y / one_tap;
-
-% Frame sync
-[fcorr, flags] = xcorr(y_symbols, f);
-[~, f_index] = max(abs(fcorr));
-f_offset = flags(f_index);
-
-y = y(f_offset + length(f) + 1:end);
 
 
-y_I = real(y);
-y_Q = imag(y);
-
-% filter using matched filter
-matched_filter = fliplr(pt);
-z_I = conv(y_I, matched_filter);
-z_Q = conv(y_Q, matched_filter);
-
-% Sample
-z_Ik = z_I(1:L:end);
-z_Qk = z_Q(1:L:end);
-
-z_k = z_Ik + j * z_Qk;
-
-% demodulate (threshold)
-z_demodulated = z_k > 0;
+chunk_size = chunk * 0.3;
+chunk_size = length(chunk_size);
 
 
-% BER
+%% Filter
+y = conv(y, matched_filter);
+
+%% Downsample
+tau = mod(length(y), L);
+y_synced2 = y(tau +1:end);
+y_downsampled = y(1:L:end);
+
+%% Time sync
+[corr, lags] = xcorr(y_downsampled, t); % look at class slides which is based on analog signal
+[max_value, timing_index] = max(abs(corr));
+timing_offset = lags(timing_index);
+phase = angle(max_value);
+delta = timing_offset + length(t); % determine the start of the first pilot
+
+y_synced = y_downsampled(delta + 1:end);
+%y_synced = y_synced * exp(-j*phase);
+
+first_pilot = y_downsampled(delta + 1:delta + length(ps)); % extract first pilot
+
+%% Frame sync
+[fcorr, flags] = xcorr(y_downsampled, f);
+[~, frame_index] = max(abs(fcorr));
+frame_offset = lags(frame_index);
+
+start_first_chunk = frame_offset + length(f);
+y_fsynced = y_downsampled(start_first_chunk+1:end);
+
+first_chunk = y_fsynced(1:chunk_size);
+
+%% Equalizer
+one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
+equalizations = [one_tap];
+
+%before_equalization = sample_first_chunk;
+
+%first_chunk = first_chunk; % / one_tap;
+
+delta = chunk_size;
+
+%% Equalize based on number of chunks (n) and remove pilots from message
+chunks = [first_chunk];
+
+for i = 1:1:n-1
+    % extract nth pilot
+    pilot = y_fsynced(delta + 1:delta + length(ps));
+
+    % calculate one tap
+    one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
+    equalizations = [equalizations, one_tap];
+
+    start_of_chunk = delta + length(ps);
+    current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
+
+    % Equalize chunk
+    chunk = current_chunk; % / one_tap; % This should be applied after sampling
+
+    % add equalized chunk to message
+    chunks = [chunks, chunk];
+    
+    % update delta to start of next pilot sequence
+    delta = start_of_chunk + chunk_size;
+end
+
+before_equalizations = chunks;
+for i = 1:n
+    chunks((i - 1)*chunk_size + 1:i*chunk_size) = chunks((i - 1)*chunk_size + 1:i*chunk_size) / equalizations(i);
+end
+
+z_k = chunks;
+
+%% demodulate (threshold)
+z_demodulated = qamdemod(z_k, M);
+
+
+%% BER
 message = imread("shannon1440.bmp");
 message_vec = reshape(message, 1, []);
 
-bits = message_vec';
-BER = mean(z_demodulated(1:length(bits)) ~= bits);
+bits = message_vec;
+
+BER = mean(z_demodulated ~= bits);
 disp(['BER is ', num2str(BER)])
 
-% Plot constellation
+
+%% Plots
+
+% transmited and received signals and pt
 figure(1)
-stem([1:length(bits)], message_vec,'bx')
+clf
+subplot(2,1,1)
+plot(t_transmitted, real(transmitsignal),'b')
 hold on
-stem([1:length(bits)], z_demodulated(1:length(bits)),'ro')
-legend('x_k', 'z_k')
-xlabel('discrete time k')
-axis tight
+plot(t_transmitted, imag(transmitsignal),'r')
+legend('real','imag')
+ylabel('xI(t)  and  xQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2)
+plot(t_received, real(receivedsignal),'b')
+hold on
+plot(t_received, imag(receivedsignal),'r')
+zoom xon
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+
+figure(2)
+clf
+subplot(2,1,1)
+plot(([0:length(transmitsignal)-1]/length(transmitsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(transmitsignal))))
+ylabel('abs(X(f))')
+xlabel('Frequency in MHz')
+subplot(2,1,2)
+plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
+ylabel('abs(Y(f))')
+xlabel('Frequency in MHz')
+
+figure(3)
+clf
+subplot(2,1,1);
+plot(t_p, pt, 'b');
+xlabel('Time in microseconds');
+ylabel('Pulse function p(t)');
+hold on;
+subplot(2,1,2);
+plot(([0:length(pt)-1]/length(pt)-0.5) * Fs / 10^6, abs(fftshift(fft(pt))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
+
+
+% recovered image
+figure(4)
+subplot(2,1,1);
+recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+imshow(recovered_image);
+subplot(2,1,2);
+imshow(message);
+
+% zk - before equalization
+figure(5);
+plot(real(before_equalizations), imag(before_equalizations), 'rx')
+
+% vk - after equalization
+figure(6);
+plot(real(z_k(1:1440)), imag(z_k(1:1440)), 'rx');
+
+
+t_synced = [1:length(y_synced)] / Fs * 10^6;
+
+% y after time synchronization
+figure(7)
+clf
+subplot(2,1,1)
+plot(t_synced, real(y_synced),'b')
+hold on
+plot(t_synced, imag(y_synced),'r')
+legend('real','imag')
+ylabel('yI(t)  and  yQ(t)')
+xlabel('Time in microseconds')
+subplot(2,1,2);
+plot(([0:length(y_synced)-1]/length(y_synced)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced))))
+xlabel('Frequency in MHz');
+ylabel('abs(P(f))');
+
+% z demodulated
+figure(8)
+clf
+subplot(2,1,1);
+plot(z_demodulated(1:length(bits)), 'r');
+subplot(2,1,2);
+plot(bits, 'b')
+
+
+
