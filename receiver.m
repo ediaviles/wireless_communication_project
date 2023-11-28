@@ -1,14 +1,24 @@
+sigman = 0.2;
+
+receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
+%T o test the effect of phase offset and delay, you could simulate such a channel as
+%padding = (randn(1,1000) > 0.5) * 2 - 1;
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+
+
+
 matched_filter = flipud(pt);
 
-y = receivedsignal';
+y = receivedsignal;
 
-t = timing_sync_bits * 0.46;
+t = timing_sync_bits * 0.3;
 
-ps = pilot_sequence * 0.46;
+ps = pilot_sequence * 0.3;
 
-f = fsync_sequence * 0.46;
+f = fsync_sequence * 0.3;
 
-chunk_size = chunk * 0.46;
+chunk_size = chunk * 0.3;
 chunk_size = length(chunk_size);
 
 
@@ -84,8 +94,7 @@ end
 z_k = chunks;
 
 %% demodulate (threshold)
-z_real = real(z_k);
-z_demodulated = z_real > 0;
+z_demodulated = qamdemod(z_k, M);
 
 
 %% BER
