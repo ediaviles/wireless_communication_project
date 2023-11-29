@@ -124,9 +124,29 @@ first_chunk = y_fsynced(1:chunk_size);
 %first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
-one_tap = (first_pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
-equalizations = [one_tap];
+%one_tap = (first_pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
+%equalizations = [one_tap];
 
+L1 = -8;
+L2 = 8;
+w = zeros(1, L2 - L1 + 1); % w is array of size L2 + abs(L1) + 1 -> Right now 21
+u = first_pilot(end:-1:start);
+v0 = conv(w, first_pilot);
+e0 = v0 - modulated_pilot;
+new_w = w;
+step_size = 0.5;
+for n = L2-L1+1 : N 
+	u = inp(n:-1:n-sysorder+1) ;
+    y(n)= w' * u;
+    e(n) = d(n) - y(n) ;
+% Start with big mu for speeding the convergence then slow down to reach the correct weights
+    if n < 20
+        mu=0.32;
+    else
+        mu=0.15;
+    end
+	w = w + mu * u * e(n) ;
+end
 %before_equalization = sample_first_chunk;
 
 %first_chunk = first_chunk; % / one_tap;
@@ -141,8 +161,16 @@ for i = 1:1:n-1
     pilot = y_fsynced(delta + 1:delta + length(ps)/b);
 
     % calculate one tap
-    one_tap = (pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
-    equalizations = [equalizations, one_tap];
+    %one_tap = (pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
+    %equalizations = [equalizations, one_tap];
+    
+    vk = conv(w, pilot);
+    ek = vk - modulated_pilot;
+    new_w = w;
+    for j = 1:length(new_w)
+        new_w(j) = w(j) - step_size * ek * conj(pilot(length(pilot) - j + 1));
+    end
+    w = new_w;
 
     start_of_chunk = delta + length(ps)/b;
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
@@ -166,12 +194,13 @@ z_k = chunks;
 
 %% demodulate (threshold)
 z_demodulated = qamdemod(z_k, M);
+zd = z_demodulated;
 guess = ones(1, length(z_demodulated) * b);
 for i = 1:length(z_demodulated)
     start_i = b*(i - 1) + 1
     end_i = b*(i)
     decimal = z_demodulated(i);
-    binary = de2bi(decimal);
+    binary = de2bi(decimal, b, 'left-msb');
     guess(start_i:end_i) = binary;
 end
 z_demodulated = guess;

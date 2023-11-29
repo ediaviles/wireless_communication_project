@@ -28,21 +28,21 @@ end
 t = t_modulated * 0.3;
 
 ps = pilot_sequence * 0.3;
-
+pilot_symbols = modulated_pilot * 0.3;
 f = fsync_sequence;
-% f_modulated = ones(1, length(f));
-% for i = 1:length(f_modulated)
-%     start_i = b*(i - 1) + 1
-%     end_i = b*(i)
-%     grouping = f(start_i:end_i);
-% 
-%     % Convert binary grouping to decimal
-%     decimal_value = bi2de(grouping, 'left-msb');
-% 
-%     % QAM modulation
-%     f_modulated(i) = qammod(decimal_value, M);
-% end
-% f = f_modulated * 0.3;
+f_modulated = ones(1, length(f));
+for i = 1:length(f_modulated)
+    start_i = b*(i - 1) + 1
+    end_i = b*(i)
+    grouping = f(start_i:end_i);
+
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
+
+    % QAM modulation
+    f_modulated(i) = qammod(decimal_value, M);
+end
+f = f_modulated * 0.3;
 
 chunk_size = chunk * 0.3;
 chunk_size = length(chunk_size);
@@ -66,7 +66,7 @@ delta = timing_offset + length(t); % determine the start of the first pilot
 y_synced = y_downsampled(delta + 1:end);
 %y_synced = y_synced * exp(-j*phase);
 
-first_pilot = y_downsampled(delta + 1:delta + length(ps)); % extract first pilot
+first_pilot = y_downsampled(delta + 1:delta + length(pilot_symbols)); % extract first pilot
 
 %% Frame sync
 [fcorr, flags] = xcorr(y_downsampled, f);
@@ -79,9 +79,18 @@ y_fsynced = y_downsampled(start_first_chunk+1:end);
 first_chunk = y_fsynced(1:chunk_size);
 
 %% Equalizer
-one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
-equalizations = [one_tap];
+%one_tap = (first_pilot*conj(ps)') / (conj(ps)*ps');
+%equalizations = [one_tap];
 
+% Estimating symbol energy and Noise Variance
+E_s = mean(abs(pilot_symbols).^2);
+H_est = first_pilot/pilot_symbols;
+noise_estimate = first_pilot - H_est * pilot_symbols;
+sigma_n2 = var(noise_estimate);
+
+SNR = E_s / sigma_n2;
+mmse_filter = conj(H_est) / (abs(H_est)^2 + 1/SNR)
+equalizations = [mmse_filter];
 %before_equalization = sample_first_chunk;
 
 %first_chunk = first_chunk; % / one_tap;
@@ -93,13 +102,19 @@ chunks = [first_chunk];
 
 for i = 1:1:n-1
     % extract nth pilot
-    pilot = y_fsynced(delta + 1:delta + length(ps));
+    pilot = y_fsynced(delta + 1:delta + length(pilot_symbols));
 
     % calculate one tap
-    one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
-    equalizations = [equalizations, one_tap];
+    %one_tap = (pilot*conj(ps)') / (conj(ps)*ps');
+    %equalizations = [equalizations, one_tap];
+    H_est = pilot / pilot_symbols;
+    noise_estimate = pilot - H_est * pilot_symbols;
+    sigma_n2 = var(noise_estimate);
+    SNR = E_s / sigma_n2;
+    mmse_filter = conj(H_est) / (abs(H_est)^2 + 1/SNR);
+    equalizations = [equalizations, mmse_filter];
 
-    start_of_chunk = delta + length(ps);
+    start_of_chunk = delta + length(pilot_symbols);
     current_chunk = y_fsynced(start_of_chunk + 1:start_of_chunk + chunk_size);
 
     % Equalize chunk

@@ -23,7 +23,6 @@ for i = 1:length(xk)
     % QAM modulation
     xk(i) = qammod(decimal_value, M);
 end
-
 % sampling freq.:
 Fs = 200 * 10^6;
 
