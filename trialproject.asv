@@ -136,7 +136,7 @@ step_size = 0.05;
 new_w = zeros(1, length(w));
 for i = 1:length(modulated_pilot)
     u = z_k(i + delta + abs(L1):-1:i + delta - L2);
-    v(i) = sum(w .* u);
+    v(i) = w * u';
     e(i) = v(i) - modulated_pilot(i);
     % for j = 1:length(new_w)
     %     new_w(j) = w(j) - step_size * e(i) * conj(u(j));
@@ -164,7 +164,7 @@ end
 %before_equalization = sample_first_chunk;
 
 %first_chunk = first_chunk; % / one_tap;
-zk_delta = delta + length(modulated_pilot) + length(f);
+zk_delta = delta + length(modulated_pilot) + length(f) + chunk_size;
 delta = chunk_size;
 
 
@@ -183,8 +183,7 @@ for i = 1:1:n-1
     new_w = w;
     for i = 1:length(modulated_pilot)
         u = z_k(i + zk_delta + abs(L1):-1:i + zk_delta - L2);
-        s = w .* u;
-        v(i) = sum(s);
+        s = w * u';
         e(i) = v(i) - modulated_pilot(i);
         % for j = 1:length(new_w)
         %     new_w(j) = w(j) - step_size * e(i) * conj(u(j));
@@ -204,7 +203,7 @@ for i = 1:1:n-1
     
     % update delta to start of next pilot sequence
     delta = start_of_chunk + chunk_size;
-    zk_delta = zk_delta + chunk_size;
+    zk_delta = zk_delta + chunk_size + length(modulated_pilot);
 end
 
 before_equalizations = chunks;

@@ -131,7 +131,7 @@ L2 = 8;
 w = zeros(1, L2 - L1 + 1); % w is array of size L2 + abs(L1) + 1 -> Right now 21
 v = zeros(1, length(modulated_pilot));
 e = zeros(1, length(modulated_pilot));
-step_size = 0.05;
+step_size = 0.0005;
 % use zk and delta for start of pilot
 new_w = zeros(1, length(w));
 for i = 1:length(modulated_pilot)
@@ -183,7 +183,7 @@ for i = 1:1:n-1
     new_w = w;
     for i = 1:length(modulated_pilot)
         u = z_k(i + zk_delta + abs(L1):-1:i + zk_delta - L2);
-        s = w * u';
+        v(i) = w * u';
         e(i) = v(i) - modulated_pilot(i);
         % for j = 1:length(new_w)
         %     new_w(j) = w(j) - step_size * e(i) * conj(u(j));
