@@ -41,7 +41,7 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 frequency_sync_bits = ones(1, 100);
 rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
-pilot_sequence = (randn(1, 64) > 0.5);
+pilot_sequence = (randn(1, 100) > 0.5);
 % modulate pilot
 modulated_pilot = ones(1, length(pilot_sequence)/b);
 for i = 1:length(modulated_pilot)

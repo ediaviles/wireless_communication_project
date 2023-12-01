@@ -1,10 +1,10 @@
-sigman = 0.2;
+sigman = 0;
 
 receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
 transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
-receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+receivedsignal = exp(j*2*pi) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 
 
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
@@ -58,9 +58,10 @@ delta = length(t_modulated);
 
 y_synced = z_k(delta + 1:end); % after time sync
 %% Frame sync
-[fcorr, flags] = xcorr(z_k, f);
-[~, frame_index] = max(abs(fcorr));
-frame_offset = flags(frame_index);
+%[fcorr, flags] = xcorr(z_k, f);
+%[~, frame_index] = max(abs(fcorr));
+%frame_offset = flags(frame_index);
+frame_offset = length(modulated_pilot) + delta; % I modified this
 
 %% Extract first chunk
 start_first_chunk = frame_offset + length(f);
@@ -71,6 +72,8 @@ first_chunk = y_fsynced(1:chunk_size);
 chunks = [first_chunk']; % get all of our chunks
 filters = [LMS(z_k, modulated_pilot, delta)']; % train their respective filters
 delta = delta + chunk_size;
+figure(69);
+plot(abs(z_k));
 %% Equalize each chunk (TODO)
 for i = 1:n-1
     filters = [filters, LMS(z_k, modulated_pilot, delta)'];
@@ -78,6 +81,12 @@ for i = 1:n-1
     delta = delta + length(modulated_pilot) + chunk_size;
 end
 
+before_equalizations = reshape(chunks, 1, []);
+zk_equalized = []
+for i = 1:n
+    vk = conv(transpose(filters(:,i)), transpose(chunks(:,i)));
+    zk_equalized = [zk_equalized, vk'];
+end
 
 %% Soft decoding (TODO)
 
@@ -153,7 +162,7 @@ plot(real(before_equalizations), imag(before_equalizations), 'rx')
 
 % vk - after equalization
 figure(6);
-plot(real(z_k(1:1440/b)), imag(z_k(1:1440/b)), 'rx');
+plot(real(zk_equalized), imag(zk_equalized), 'rx');
 
 y_synced = y_sync;
 

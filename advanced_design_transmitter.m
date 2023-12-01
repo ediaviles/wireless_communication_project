@@ -27,7 +27,7 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 frequency_sync_bits = ones(1, 100);
 rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
-pilot_sequence = (randn(1, 64) > 0.5);
+pilot_sequence = (randn(1, 100) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequence]; %use this for clarity
 
