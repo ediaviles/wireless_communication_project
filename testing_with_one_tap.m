@@ -69,34 +69,43 @@ y_fsynced = z_k(start_first_chunk+1:end);
 
 first_chunk = y_fsynced(1:chunk_size);
 
+first_pilot = z_k(delta+1:delta + length(modulated_pilot));
+first_eq = (first_pilot*conj(modulated_pilot)') / (conj(modulated_pilot)*modulated_pilot');
+equalizations = [first_eq];
 chunks = [first_chunk']; % get all of our chunks
-L2 = 4;
-L1 = -4;
-step_size = 0.01;
-trained_w = zeros(1, L2 - L1);
-trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
-filters = [trained_w']; % train their respective filters
-delta = delta + chunk_size;
-figure(69);
-scatter(real(z_k), imag(z_k));
+%L2 = 4;
+%L1 = -4;
+%step_size = 0.01;
+%trained_w = zeros(1, L2 - L1);
+%trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
+%filters = [trained_w']; % train their respective filters
+delta = start_first_chunk + chunk_size;
+%figure(69);
+%plot(real(z_k), imag(z_k));
 %% Equalize each chunk (TODO)
 for i = 1:n-1
-    trained_w = zeros(1, L2 - L1);
-    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
-    filters = [filters, trained_w']; % train their respective filters
+    %trained_w = zeros(1, L2 - L1);
+    %trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
+    pilot = z_k(delta+1:delta + length(modulated_pilot));
+    one_tap = (pilot * conj(modulated_pilot)') / (conj(modulated_pilot) * modulated_pilot');
+
+    equalizations = [equalizations, one_tap];
+    %filters = [filters, trained_w']; % train their respective filters
     chunks = [chunks, z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size)'];
     delta = delta + length(modulated_pilot) + chunk_size;
 end
 
 before_equalizations = reshape(chunks, 1, []);
-zk_equalized = []
+zk_equalized = [];
 for i = 1:n
-    filter = transpose(filters(:,i));
+    %filter = transpose(filters(:,i));
     current_chunk = transpose(chunks(:,i));
-    vk = conv(filter, current_chunk);
-    figure(i + 1000);
-    scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
-    zk_equalized = [zk_equalized, vk(1:chunk_size)];
+    %vk = conv(filter, current_chunk);
+    eq = equalizations(i);
+    zk_equalized = [zk_equalized, current_chunk/eq];
+    %figure(i + 1000);
+    %scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
+    %zk_equalized = [zk_equalized, vk(1:chunk_size)];
 end
 
 %% Soft decoding (TODO)
@@ -164,8 +173,8 @@ ylabel('abs(P(f))');
 % recovered image
 figure(4)
 subplot(2,1,1);
-%recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
-%imshow(recovered_image);
+recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 

@@ -70,20 +70,18 @@ y_fsynced = z_k(start_first_chunk+1:end);
 first_chunk = y_fsynced(1:chunk_size);
 
 chunks = [first_chunk']; % get all of our chunks
-L2 = 4;
-L1 = -4;
-step_size = 0.01;
+L2 = 3;
+L1 = -3;
+step_size = 0.001;
 trained_w = zeros(1, L2 - L1);
-trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
-filters = [trained_w']; % train their respective filters
+trained_w = LMS(trained_w, zk)
+filters = [LMS(trained_w, z_k, modulated_pilot, delta, step_size)']; % train their respective filters
 delta = delta + chunk_size;
 figure(69);
-scatter(real(z_k), imag(z_k));
+plot(abs(z_k));
 %% Equalize each chunk (TODO)
 for i = 1:n-1
-    trained_w = zeros(1, L2 - L1);
-    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
-    filters = [filters, trained_w']; % train their respective filters
+    filters = [filters, LMS(z_k, modulated_pilot, delta)'];
     chunks = [chunks, z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size)'];
     delta = delta + length(modulated_pilot) + chunk_size;
 end
@@ -94,8 +92,8 @@ for i = 1:n
     filter = transpose(filters(:,i));
     current_chunk = transpose(chunks(:,i));
     vk = conv(filter, current_chunk);
-    figure(i + 1000);
-    scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
+    figure(i +100);
+    scatter(real(vk), imag(vk));
     zk_equalized = [zk_equalized, vk(1:chunk_size)];
 end
 
@@ -106,8 +104,6 @@ z_demodulated = demodulate_4qam(zk_equalized);
 
 %% BER
 message = imread("shannon1440.bmp");
-%message = imread("shannon20520.bmp");
-
 message_vec = reshape(message, 1, []);
 
 bits = message_vec;
@@ -164,8 +160,8 @@ ylabel('abs(P(f))');
 % recovered image
 figure(4)
 subplot(2,1,1);
-%recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
-%imshow(recovered_image);
+recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 

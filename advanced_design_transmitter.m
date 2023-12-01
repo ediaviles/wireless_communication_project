@@ -2,6 +2,7 @@ clear
 clc
 
 message = imread("shannon1440.bmp");
+%message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
@@ -33,7 +34,7 @@ preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequenc
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
-n = 10; % number of chunks
+n = 6; % number of chunks
 chunks = reshape(message_vec, length(message_vec)/n, []);
 xk = [preamble, chunks(:,1)'];
 for i = 2:n
