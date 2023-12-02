@@ -9,6 +9,7 @@ message_vec = reshape(message, 1, []);
 % M-QAM variables
 M = 4;
 b = log2(M);
+d = 0.3;
 
 % sampling freq.:
 Fs = 200 * 10^6;
@@ -45,7 +46,7 @@ end
 
 %% Modulate
 xk = modulate_4qam(xk);
-xk = xk * 0.3;
+xk = xk * d;
 
 %% Upsample
 xk = upsample(xk, L);

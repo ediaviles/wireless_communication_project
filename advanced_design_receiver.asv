@@ -13,17 +13,17 @@ matched_filter = fliplr(pt);
 
 y = receivedsignal;
 
-t = timing_sync_bits;
+t = timing_sync_bits; 
 t_modulated = modulate_4qam(t);
-t = t_modulated * 0.3;
+t = t_modulated * d;
 
 
-ps = pilot_sequence * 0.3;
+ps = pilot_sequence * d;
 modulated_pilot = modulate_4qam(pilot_sequence);
 
 f = fsync_sequence;
 f_modulated = modulate_4qam(f);
-f = f_modulated * 0.3;
+f = f_modulated * d;
 f = upsample(f, L);
 f = conv(f, pt);
 f = f(1:L:end);
@@ -53,10 +53,10 @@ y_filt = conv(y_sync, matched_filter);
 z_k = y_filt(1:L:end); % this starts at the time symbol seq
 
 
-%% Extract first pilot
+%% Start of first pilot
 delta = length(t_modulated);
 
-y_synced = z_k(delta + 1:end); % after time sync
+%y_synced = z_k(delta + 1:end); % after time sync
 %% Frame sync
 %[fcorr, flags] = xcorr(z_k, f);
 %[~, frame_index] = max(abs(fcorr));
@@ -64,38 +64,41 @@ y_synced = z_k(delta + 1:end); % after time sync
 frame_offset = length(modulated_pilot) + delta; % I modified this
 
 %% Extract first chunk
-start_first_chunk = frame_offset + length(f);
+start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
 y_fsynced = z_k(start_first_chunk+1:end);
 
 first_chunk = y_fsynced(1:chunk_size);
 
 chunks = [first_chunk']; % get all of our chunks
-L2 = 3;
-L1 = -3;
-step_size = 0.001;
+L2 = 4;
+L1 = -4;
+gamma = 1;
 trained_w = zeros(1, L2 - L1);
-trained_w = LMS(trained_w, zk)
-filters = [LMS(trained_w, z_k, modulated_pilot, delta, step_size)']; % train their respective filters
-delta = delta + chunk_size;
+trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
+filters = [trained_w']; % train their respective filters
+delta = delta + length(modulated_pilot) + length(f_modulated) + chunk_size;
 figure(69);
-plot(abs(z_k));
+scatter(real(z_k), imag(z_k));
 %% Equalize each chunk (TODO)
 for i = 1:n-1
-    filters = [filters, LMS(z_k, modulated_pilot, delta)'];
-    chunks = [chunks, z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size)'];
+    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
+    filters = [filters, transpose(trained_w)]; % train their respective filters
+    chunks = [chunks, transpose(z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size))];
     delta = delta + length(modulated_pilot) + chunk_size;
 end
 
 before_equalizations = reshape(chunks, 1, []);
 zk_equalized = []
-for i = 1:n
-    filter = transpose(filters(:,i));
-    current_chunk = transpose(chunks(:,i));
-    vk = conv(filter, current_chunk);
-    figure(i +100);
-    scatter(real(vk), imag(vk));
-    zk_equalized = [zk_equalized, vk(1:chunk_size)];
-end
+% for i = 1:n
+%     w = transpose(filters(:,i));
+%     current_chunk = transpose(chunks(:,i));
+%     vk = filter(w, 1, current_chunk);
+%     figure(10000 + i);
+%     scatter(real(current_chunk), imag(current_chunk));
+%     %scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
+%     zk_equalized = [zk_equalized, vk];
+% end
+
 
 %% Soft decoding (TODO)
 
@@ -104,6 +107,8 @@ z_demodulated = demodulate_4qam(zk_equalized);
 
 %% BER
 message = imread("shannon1440.bmp");
+%message = imread("shannon20520.bmp");
+
 message_vec = reshape(message, 1, []);
 
 bits = message_vec;
@@ -160,8 +165,8 @@ ylabel('abs(P(f))');
 % recovered image
 figure(4)
 subplot(2,1,1);
-recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
-imshow(recovered_image);
+%recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+%imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 

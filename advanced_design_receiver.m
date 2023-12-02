@@ -15,15 +15,15 @@ y = receivedsignal;
 
 t = timing_sync_bits; 
 t_modulated = modulate_4qam(t);
-t = t_modulated * 0.3;
+t = t_modulated * d;
 
 
-ps = pilot_sequence * 0.3;
+ps = pilot_sequence * d;
 modulated_pilot = modulate_4qam(pilot_sequence);
 
 f = fsync_sequence;
 f_modulated = modulate_4qam(f);
-f = f_modulated * 0.3;
+f = f_modulated * d;
 f = upsample(f, L);
 f = conv(f, pt);
 f = f(1:L:end);
@@ -72,30 +72,34 @@ first_chunk = y_fsynced(1:chunk_size);
 chunks = [first_chunk']; % get all of our chunks
 L2 = 4;
 L1 = -4;
-gamma = 5;
+gamma = 1;
 trained_w = zeros(1, L2 - L1);
 trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
 filters = [trained_w']; % train their respective filters
-delta = delta + chunk_size;
+delta = delta + length(modulated_pilot) + length(f_modulated) + chunk_size;
 figure(69);
 scatter(real(z_k), imag(z_k));
-%% Equalize each chunk (TODO)
+%% Train w for each chunk
 for i = 1:n-1
     trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
-    filters = [filters, trained_w']; % train their respective filters
-    chunks = [chunks, z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size)'];
+    filters = [filters, transpose(trained_w)]; % train their respective filters
+    chunks = [chunks, transpose(z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size))];
     delta = delta + length(modulated_pilot) + chunk_size;
 end
 
 before_equalizations = reshape(chunks, 1, []);
 zk_equalized = []
+%% Equalize
 for i = 1:n
     w = transpose(filters(:,i));
     current_chunk = transpose(chunks(:,i));
     vk = filter(w, 1, current_chunk);
+    figure(10000 + i);
+    scatter(real(current_chunk), imag(current_chunk));
     %scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
     zk_equalized = [zk_equalized, vk];
 end
+
 
 %% Soft decoding (TODO)
 
@@ -162,8 +166,8 @@ ylabel('abs(P(f))');
 % recovered image
 figure(4)
 subplot(2,1,1);
-%recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
-%imshow(recovered_image);
+recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 
