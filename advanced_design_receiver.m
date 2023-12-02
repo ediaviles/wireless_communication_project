@@ -13,7 +13,7 @@ matched_filter = fliplr(pt);
 
 y = receivedsignal;
 
-t = timing_sync_bits;
+t = timing_sync_bits; 
 t_modulated = modulate_4qam(t);
 t = t_modulated * 0.3;
 
@@ -53,10 +53,10 @@ y_filt = conv(y_sync, matched_filter);
 z_k = y_filt(1:L:end); % this starts at the time symbol seq
 
 
-%% Extract first pilot
+%% Start of first pilot
 delta = length(t_modulated);
 
-y_synced = z_k(delta + 1:end); % after time sync
+%y_synced = z_k(delta + 1:end); % after time sync
 %% Frame sync
 %[fcorr, flags] = xcorr(z_k, f);
 %[~, frame_index] = max(abs(fcorr));
@@ -64,7 +64,7 @@ y_synced = z_k(delta + 1:end); % after time sync
 frame_offset = length(modulated_pilot) + delta; % I modified this
 
 %% Extract first chunk
-start_first_chunk = frame_offset + length(f);
+start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
 y_fsynced = z_k(start_first_chunk+1:end);
 
 first_chunk = y_fsynced(1:chunk_size);
@@ -72,17 +72,16 @@ first_chunk = y_fsynced(1:chunk_size);
 chunks = [first_chunk']; % get all of our chunks
 L2 = 4;
 L1 = -4;
-step_size = 0.01;
+gamma = 5;
 trained_w = zeros(1, L2 - L1);
-trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
+trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
 filters = [trained_w']; % train their respective filters
 delta = delta + chunk_size;
 figure(69);
 scatter(real(z_k), imag(z_k));
 %% Equalize each chunk (TODO)
 for i = 1:n-1
-    trained_w = zeros(1, L2 - L1);
-    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, step_size);
+    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
     filters = [filters, trained_w']; % train their respective filters
     chunks = [chunks, z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size)'];
     delta = delta + length(modulated_pilot) + chunk_size;
@@ -91,12 +90,11 @@ end
 before_equalizations = reshape(chunks, 1, []);
 zk_equalized = []
 for i = 1:n
-    filter = transpose(filters(:,i));
+    w = transpose(filters(:,i));
     current_chunk = transpose(chunks(:,i));
-    vk = conv(filter, current_chunk);
-    figure(i + 1000);
-    scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
-    zk_equalized = [zk_equalized, vk(1:chunk_size)];
+    vk = filter(w, 1, current_chunk);
+    %scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
+    zk_equalized = [zk_equalized, vk];
 end
 
 %% Soft decoding (TODO)
