@@ -6,6 +6,8 @@ message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
+packet1
+
 % M-QAM variables
 M = 4;
 b = log2(M);
@@ -26,16 +28,16 @@ Ns = floor(N*L); % Number of filter samples
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
-frequency_sync_bits = ones(1, 100);
+frequency_sync_bits = ones(1, 20);
 rng(4);
-timing_sync_bits = (randn(1,100) > 0.5);
-pilot_sequence = (randn(1, 100) > 0.5);
+timing_sync_bits = (randn(1, 100) > 0.5);
+pilot_sequence = (randn(1, 50) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
-preamble = [frequency_sync_bits, timing_sync_bits,fsync_sequence]; %use this for clarity
+preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
-n = 1; % number of chunks
+n = 6; % number of chunks
 chunk_size = length(message_vec) / n;
 xk = [preamble];
 for i = 1:n
@@ -45,8 +47,6 @@ end
 %% LDPC Encoding (TODO)
 
 %% Modulate
-%ttt = xk(length(preamble) + length(pilot_sequence) + 1:end);
-
 xk = modulate_4qam(xk);
 xk = xk * d;
 
@@ -57,24 +57,23 @@ xk = upsample(xk, L);
 xk = conv(xk, pt);
 transmitsignal = xk;
 
-%te = conv(transmitsignal, fliplr(pt));
-te = 
-te = te(1:L:end);
-te = te(201:200 + chunk_size/b);
-te = qamdemod(te, 4);
-new_te = zeros(1, length(te) * 2);
-for i = 1:length(te)
-    guess = de2bi(te(i), 2, 'right-msb');
-    new_te((i - 1)*2 + 1: i*2) = guess;
-end
+% te = conv(transmitsignal, fliplr(pt));
+% te = te(1:L:end);
+% te = te(201:200 + chunk_size/b);
+% te = qamdemod(te, 4);
+% new_te = zeros(1, length(te) * 2);
+% for i = 1:length(te)
+%     guess = de2bi(te(i), 2, 'right-msb');
+%     new_te((i - 1)*2 + 1: i*2) = guess;
+% end
 %te = demodulate_4qam(te);
 
-figure(58)
-subplot(2,1,1);
-recovered_image = reshape(new_te, [171, 120]);
-imshow(recovered_image);
-subplot(2,1,2);
-imshow(message);
+% figure(58)
+% subplot(2,1,1);
+% recovered_image = reshape(ttt, [171, 120]);
+% imshow(recovered_image);
+% subplot(2,1,2);
+% imshow(message);
 
 %%
 save('transmitsignal.mat','transmitsignal')

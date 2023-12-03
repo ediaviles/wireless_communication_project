@@ -4,24 +4,8 @@ receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
 transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
-receivedsignal = exp(j*2*pi) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 matched_filter = fliplr(pt);
-
-r = transmitsignal;
-%debug
-g = conv(r, matched_filter);
-g = g(1:L:end);
-g = g(201:end);
-g = g(1:20520/2);
-
-g = demodulate_4qam(g);
-
-figure(58)
-subplot(2,1,1);
-recovered_image = reshape(g, [171, 120]);
-imshow(recovered_image);
-subplot(2,1,2);
-imshow(message);
 
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
@@ -72,36 +56,17 @@ frame_offset = flags(frame_index);
 
 y_fsync = y_sync(frame_offset + L:end);
 
-ttt = y_sync(1:L:end);
-ttt = ttt(length(t_modulated) + length(f_modulated) + 1:end);
-
-
-[pcorr, plags] = xcorr(y_fsync, p);
-[~, p_indexes] = maxk(abs(pcorr), n);
-p_indexes = sort(p_indexes);
-
-offset_indexes = zeros(1, n);
-for i = 1:n
-    offset_indexes(i) = plags(p_indexes(i));
-end
-
-y_psync = y_fsync(offset_indexes(1) + L:end);
-
-%chunk_size = offset_indexes(2) - offset_indexes(1);
-%chunk_size = chunk_size / L; % pilot + message
-chunk_size = length(message)/n/b + length(modulated_pilot);
 %% DOWNSAMPLE
-z_k = ttt; % this starts at the time symbol seq
+z_k = y_sync(1:L:end);
+z_k = z_k(length(t_modulated) + length(f_modulated) + 1:end); %point to first pilot
 
+chunk_size = length(message_vec)/n/b + length(modulated_pilot);
 z_k = z_k(1:chunk_size * n); % remove noise
 
 
 
 
 %% Extract first chunk
-%start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
-%y_fsynced = z_k(start_first_chunk+1:end); 
-%z_k = y_fsynced; % start of message
 L2 = 3;
 L1 = -3;
 
@@ -111,20 +76,23 @@ chunks = zeros(message_size, n);
 cs = zeros(1, message_size * n);
 filters = zeros(L2-L1, n);
 
-gamma = 0.00001;
+gamma = 10;
 trained_w = zeros(1, L2-L1);
-delta = 1;
+training = 100;
 %% Train w for each chunk
-for i = 1:n
-    pilot = z_k(delta:delta + length(modulated_pilot) - 1);
-    trained_w = LMS(trained_w, pilot, modulated_pilot, delta, gamma);
-    filters(:,i) = trained_w; % train their respective filters
-    c = z_k(delta + length(modulated_pilot):delta + chunk_size - 1);
-    cs((i-1)*message_size + 1:i*message_size) = c;
-    chunks(:,i) = transpose(c);
-    delta = delta + chunk_size;
+for j = 1:training
+    delta = 1;
+    gamma = gamma / 2;
+    for i = 1:n
+        pilot = z_k(delta:delta + length(modulated_pilot) - 1);
+        trained_w = LMS(trained_w, pilot, modulated_pilot, delta, gamma);
+        filters(:,i) = trained_w; % train their respective filters
+        c = z_k(delta + length(modulated_pilot):delta + chunk_size - 1);
+        cs((i-1)*message_size + 1:i*message_size) = c;
+        chunks(:,i) = transpose(c);
+        delta = delta + chunk_size;
+    end
 end
-
 
 before_equalizations = reshape(chunks, 1, []);
 zk_equalized = zeros(1, message_size * n);

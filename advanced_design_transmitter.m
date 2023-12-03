@@ -1,10 +1,17 @@
-clear
-clc
+%clear
+%clc
 
 %message = imread("shannon1440.bmp");
 message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
+
+packet1 = message_vec(1:length(message_vec)/2);
+%packet2 = message_vec(length(message_vec)/2 + 1:end);
+
+message_vec = packet1;
+
+%message_vec = packet2;
 
 % M-QAM variables
 M = 4;
@@ -28,8 +35,8 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 
 frequency_sync_bits = ones(1, 100);
 rng(4);
-timing_sync_bits = (randn(1,100) > 0.5);
-pilot_sequence = (randn(1, 500) > 0.5);
+timing_sync_bits = (randn(1, 100) > 0.5);
+pilot_sequence = (randn(1, 100) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
@@ -75,6 +82,8 @@ transmitsignal = xk;
 
 %%
 save('transmitsignal.mat','transmitsignal')
+%save('transmitpacket1.mat', 'transmitsignal')
+%save('transmitpacket2.mat', 'transmitsignal')
 
 load receivedsignal.mat
 
