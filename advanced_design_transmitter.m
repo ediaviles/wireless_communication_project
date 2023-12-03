@@ -1,8 +1,8 @@
 clear
 clc
 
-message = imread("shannon1440.bmp");
-%message = imread("shannon20520.bmp");
+%message = imread("shannon1440.bmp");
+message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
@@ -31,15 +31,15 @@ rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
 pilot_sequence = (randn(1, 100) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
-preamble = [frequency_sync_bits, timing_sync_bits, pilot_sequence, fsync_sequence]; %use this for clarity
+preamble = [frequency_sync_bits, timing_sync_bits,fsync_sequence]; %use this for clarity
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
 n = 6; % number of chunks
-chunks = reshape(message_vec, length(message_vec)/n, []);
-xk = [preamble, chunks(:,1)'];
-for i = 2:n
-    xk = [xk,pilot_sequence,chunks(:,i)'];
+chunk_size = length(message_vec) / n;
+xk = [preamble];
+for i = 1:n
+    xk = [xk,pilot_sequence,message_vec((i-1)*chunk_size + 1:i*chunk_size)];
 end
 
 %% LDPC Encoding (TODO)

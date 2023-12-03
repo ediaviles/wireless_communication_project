@@ -20,86 +20,104 @@ t = t_modulated * d;
 
 ps = pilot_sequence * d;
 modulated_pilot = modulate_4qam(pilot_sequence);
+p = modulated_pilot * d;
+p = upsample(p, L);
+p = conv(p, pt);
 
 f = fsync_sequence;
 f_modulated = modulate_4qam(f);
 f = f_modulated * d;
 f = upsample(f, L);
 f = conv(f, pt);
-f = f(1:L:end);
 
-chunk_size = length(message_vec)/n/b; % in symbols
+%% Filter
+zt = conv(y, matched_filter);
 
 %% Time sync
 t = upsample(t, L);
 t = conv(t, pt);
 
 ideal = t;
-[corr_id, lags_id] = xcorr(y, ideal);
+[corr_id, lags_id] = xcorr(zt, ideal);
 [ideal_max_value, ideal_timing_index] = max(abs(corr_id));
 ideal_timing_offset = lags_id(ideal_timing_index);
 
-y_sync = y(ideal_timing_offset+1:end); % signal starts at the time sync bits
-figure(111);
-plot(real(y_sync),'b')
-hold on
-plot(imag(y_sync),'r')
+y_sync = y(ideal_timing_offset+L:end); % signal starts at the time sync bits
+% figure(111);
+% plot(real(y_sync),'b')
+% hold on
+% plot(imag(y_sync),'r')
 
 
-%% Filter
-y_filt = conv(y_sync, matched_filter);
+
+%% Frame sync
+[fcorr, flags] = xcorr(y_sync, f);
+[~, frame_index] = max(abs(fcorr));
+frame_offset = flags(frame_index);
+
+y_fsync = y_sync(frame_offset + L:end);
+
+[pcorr, plags] = xcorr(y_fsync, p);
+[~, p_indexes] = maxk(abs(pcorr), n);
+p_indexes = sort(p_indexes);
+
+offset_indexes = zeros(1, n);
+for i = 1:n
+    offset_indexes(i) = plags(p_indexes(i));
+end
+
+y_psync = y_fsync(offset_indexes(1) + L:end);
+
+chunk_size = offset_indexes(2) - offset_indexes(1);
+chunk_size = chunk_size / L; % pilot + message
 
 %% DOWNSAMPLE
-z_k = y_filt(1:L:end); % this starts at the time symbol seq
+z_k = y_psync(1:L:end); % this starts at the time symbol seq
+
+z_k = z_k(1:chunk_size * n); % remove noise
 
 
-%% Start of first pilot
-delta = length(t_modulated);
+%chunk_size = length(z_k) / n;
 
-%y_synced = z_k(delta + 1:end); % after time sync
-%% Frame sync
-%[fcorr, flags] = xcorr(z_k, f);
-%[~, frame_index] = max(abs(fcorr));
-%frame_offset = flags(frame_index);
-frame_offset = length(modulated_pilot) + delta; % I modified this
 
 %% Extract first chunk
-start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
-y_fsynced = z_k(start_first_chunk+1:end);
-
-first_chunk = y_fsynced(1:chunk_size);
-
-chunks = [first_chunk']; % get all of our chunks
+%start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
+%y_fsynced = z_k(start_first_chunk+1:end); 
+%z_k = y_fsynced; % start of message
 L2 = 4;
 L1 = -4;
-gamma = 1;
-trained_w = zeros(1, L2 - L1);
-trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
-filters = [trained_w']; % train their respective filters
-delta = delta + length(modulated_pilot) + length(f_modulated) + chunk_size;
-figure(69);
-scatter(real(z_k), imag(z_k));
+
+message_size = chunk_size - length(modulated_pilot);
+
+chunks = zeros(message_size, n);
+filters = zeros(L2-L1, n);
+
+gamma = 0.0001;
+trained_w = zeros(1, L2-L1);
+delta = 1;
 %% Train w for each chunk
-for i = 1:n-1
-    trained_w = LMS(trained_w, z_k, modulated_pilot, delta, gamma);
-    filters = [filters, transpose(trained_w)]; % train their respective filters
-    chunks = [chunks, transpose(z_k(delta + length(modulated_pilot) + 1:delta + length(modulated_pilot) + chunk_size))];
-    delta = delta + length(modulated_pilot) + chunk_size;
+for i = 1:n
+    pilot = z_k(delta:delta + length(modulated_pilot) - 1);
+    trained_w = LMS(trained_w, pilot, modulated_pilot, delta, gamma);
+    filters(:,i) = trained_w; % train their respective filters
+    c = z_k(delta + length(modulated_pilot):delta + chunk_size - 1);
+    chunks(:,i) = transpose(c);
+    delta = delta + chunk_size;
 end
+
 
 before_equalizations = reshape(chunks, 1, []);
-zk_equalized = []
-%% Equalize
+zk_equalized = zeros(1, message_size * n);
+% Equalize
 for i = 1:n
-    w = transpose(filters(:,i));
-    current_chunk = transpose(chunks(:,i));
+    w = filters(:,i);
+    current_chunk = chunks(:,i);
     vk = filter(w, 1, current_chunk);
+    %vk = conv(current_chunk, w);
     figure(10000 + i);
-    scatter(real(current_chunk), imag(current_chunk));
-    %scatter(real(vk(L2: chunk_size + L2)), imag(vk(L2: chunk_size + L2)));
-    zk_equalized = [zk_equalized, vk];
+    scatter(real(vk), imag(vk));
+    zk_equalized((i - 1)*message_size + 1: i*message_size) = vk(1:message_size);
 end
-
 
 %% Soft decoding (TODO)
 
@@ -107,8 +125,8 @@ end
 z_demodulated = demodulate_4qam(zk_equalized);
 
 %% BER
-message = imread("shannon1440.bmp");
-%message = imread("shannon20520.bmp");
+%message = imread("shannon1440.bmp");
+message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
@@ -120,83 +138,85 @@ disp(['BER is ', num2str(BER)])
 
 %% Plots
 
-% transmited and received signals and pt
-figure(1)
-clf
-subplot(2,1,1)
-plot(t_transmitted, real(transmitsignal),'b')
-hold on
-plot(t_transmitted, imag(transmitsignal),'r')
-legend('real','imag')
-ylabel('xI(t)  and  xQ(t)')
-xlabel('Time in microseconds')
-subplot(2,1,2)
-plot(t_received, real(receivedsignal),'b')
-hold on
-plot(t_received, imag(receivedsignal),'r')
-zoom xon
-legend('real','imag')
-ylabel('yI(t)  and  yQ(t)')
-xlabel('Time in microseconds')
+%transmited and received signals and pt
+% t_transmitted = [0:length(transmitsignal)-1] / Fs;
+% t_received = [0:length(receivedsignal)-1] / Fs;
+% figure(1)
+% clf
+% subplot(2,1,1)
+% plot(t_transmitted, real(transmitsignal),'b')
+% hold on
+% plot(t_transmitted, imag(transmitsignal),'r')
+% legend('real','imag')
+% ylabel('xI(t)  and  xQ(t)')
+% xlabel('Time in microseconds')
+% subplot(2,1,2)
+% plot(t_received, real(receivedsignal),'b')
+% hold on
+% plot(t_received, imag(receivedsignal),'r')
+% zoom xon
+% legend('real','imag')
+% ylabel('yI(t)  and  yQ(t)')
+% xlabel('Time in microseconds')
 
-figure(2)
-clf
-subplot(2,1,1)
-plot(([0:length(transmitsignal)-1]/length(transmitsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(transmitsignal))))
-ylabel('abs(X(f))')
-xlabel('Frequency in MHz')
-subplot(2,1,2)
-plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
-ylabel('abs(Y(f))')
-xlabel('Frequency in MHz')
+% figure(2)
+% clf
+% subplot(2,1,1)
+% plot(([0:length(transmitsignal)-1]/length(transmitsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(transmitsignal))))
+% ylabel('abs(X(f))')
+% xlabel('Frequency in MHz')
+% subplot(2,1,2)
+% plot(([0:length(receivedsignal)-1]/length(receivedsignal)-0.5) * Fs / 10^6, abs(fftshift(fft(receivedsignal))))
+% ylabel('abs(Y(f))')
+% xlabel('Frequency in MHz')
 
-figure(3)
-clf
-subplot(2,1,1);
-plot(t_p, pt, 'b');
-xlabel('Time in microseconds');
-ylabel('Pulse function p(t)');
-hold on;
-subplot(2,1,2);
-plot(([0:length(pt)-1]/length(pt)-0.5) * Fs / 10^6, abs(fftshift(fft(pt))))
-xlabel('Frequency in MHz');
-ylabel('abs(P(f))');
+% figure(3)
+% clf
+% subplot(2,1,1);
+% plot(t_p, pt, 'b');
+% xlabel('Time in microseconds');
+% ylabel('Pulse function p(t)');
+% hold on;
+% subplot(2,1,2);
+% plot(([0:length(pt)-1]/length(pt)-0.5) * Fs / 10^6, abs(fftshift(fft(pt))))
+% xlabel('Frequency in MHz');
+% ylabel('abs(P(f))');
 
 
 % recovered image
 figure(4)
 subplot(2,1,1);
-recovered_image = reshape(z_demodulated(1:length(bits)), [45, 32]);
+recovered_image = reshape(z_demodulated, [171, 120]);
 imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);
 
-% zk - before equalization
+%zk - before equalization
 figure(5);
 plot(real(before_equalizations), imag(before_equalizations), 'rx')
 
 % vk - after equalization
 figure(6);
 plot(real(zk_equalized), imag(zk_equalized), 'rx');
-
-y_synced = y_sync;
-
-t_synced = [1:length(y_synced)] / Fs * 10^6;
+% 
+% y_synced = y_sync;
+% 
+% t_synced = [1:length(y_synced)] / Fs * 10^6;
 
 % y after time synchronization
-figure(7)
-clf
-subplot(2,1,1)
-plot(t_synced, real(y_synced),'b')
-hold on
-plot(t_synced, imag(y_synced),'r')
-legend('real','imag')
-ylabel('yI(t)  and  yQ(t)')
-xlabel('Time in microseconds')
-subplot(2,1,2);
-plot(([0:length(y_synced)-1]/length(y_synced)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced))))
-xlabel('Frequency in MHz');
-ylabel('abs(P(f))');
+% figure(7)
+% clf
+% subplot(2,1,1)
+% plot(t_synced, real(y_synced),'b')
+% hold on
+% plot(t_synced, imag(y_synced),'r')
+% legend('real','imag')
+% ylabel('yI(t)  and  yQ(t)')
+% xlabel('Time in microseconds')
+% subplot(2,1,2);
+% plot(([0:length(y_synced)-1]/length(y_synced)-0.5) * Fs / 10^6, abs(fftshift(fft(y_synced))))
+% xlabel('Frequency in MHz');
+% ylabel('abs(P(f))');
 
 % z demodulated
 %figure(8)
