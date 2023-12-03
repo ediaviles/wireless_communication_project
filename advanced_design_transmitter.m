@@ -16,7 +16,7 @@ message_vec = reshape(message, 1, []);
 % M-QAM variables
 M = 16;
 b = log2(M);
-d = 0.3;
+d = 1/6;
 
 % sampling freq.:
 Fs = 200 * 10^6;
@@ -39,7 +39,6 @@ timing_sync_bits = (randn(1, 100) > 0.5);
 pilot_sequence = (randn(1, 100) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
-
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
 n = 6; % number of chunks
@@ -64,6 +63,7 @@ for i = 1:length(xk_mod)
     % QAM modulation
     xk_mod(i) = qammod(decimal_value, M);
 end
+xk_mod = xk_mod * d;
 %% Upsample
 xk_up = upsample(xk_mod, L);
 

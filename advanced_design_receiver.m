@@ -71,9 +71,9 @@ message_size = chunk_size - length(modulated_pilot);
 chunks = zeros(message_size, n);
 filters = zeros(L2-L1, n);
 
-gamma = 10;
+gamma = 8;
 trained_w = zeros(1, L2-L1);
-training = 20;
+training = 50;
 %% Train w for each chunk
 for j = 1:training
     delta = 1;
