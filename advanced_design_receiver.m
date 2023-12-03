@@ -1,15 +1,30 @@
-sigman = 0;
+sigman = 0.2;
 
 receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
 transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
 receivedsignal = exp(j*2*pi) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+matched_filter = fliplr(pt);
 
+r = transmitsignal;
+%debug
+g = conv(r, matched_filter);
+g = g(1:L:end);
+g = g(201:end);
+g = g(1:20520/2);
+
+g = demodulate_4qam(g);
+
+figure(58)
+subplot(2,1,1);
+recovered_image = reshape(g, [171, 120]);
+imshow(recovered_image);
+subplot(2,1,2);
+imshow(message);
 
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
-matched_filter = fliplr(pt);
 
 y = receivedsignal;
 
@@ -42,7 +57,7 @@ ideal = t;
 [ideal_max_value, ideal_timing_index] = max(abs(corr_id));
 ideal_timing_offset = lags_id(ideal_timing_index);
 
-y_sync = y(ideal_timing_offset+L:end); % signal starts at the time sync bits
+y_sync = y(ideal_timing_offset:end); % signal starts at the time sync bits
 % figure(111);
 % plot(real(y_sync),'b')
 % hold on
@@ -57,6 +72,10 @@ frame_offset = flags(frame_index);
 
 y_fsync = y_sync(frame_offset + L:end);
 
+ttt = y_sync(1:L:end);
+ttt = ttt(length(t_modulated) + length(f_modulated) + 1:end);
+
+
 [pcorr, plags] = xcorr(y_fsync, p);
 [~, p_indexes] = maxk(abs(pcorr), n);
 p_indexes = sort(p_indexes);
@@ -68,31 +87,39 @@ end
 
 y_psync = y_fsync(offset_indexes(1) + L:end);
 
-chunk_size = offset_indexes(2) - offset_indexes(1);
-chunk_size = chunk_size / L; % pilot + message
-
+%chunk_size = offset_indexes(2) - offset_indexes(1);
+%chunk_size = chunk_size / L; % pilot + message
+chunk_size = 20520/2 + 50;
 %% DOWNSAMPLE
-z_k = y_psync(1:L:end); % this starts at the time symbol seq
+z_k = ttt; % this starts at the time symbol seq
 
 z_k = z_k(1:chunk_size * n); % remove noise
 
+test = z_k(1 + length(modulated_pilot):end);
+test = demodulate_4qam(test);
 
-%chunk_size = length(z_k) / n;
+figure(54)
+subplot(2,1,1);
+recovered_image = reshape(test, [171, 120]);
+imshow(recovered_image);
+subplot(2,1,2);
+imshow(message);
 
 
 %% Extract first chunk
 %start_first_chunk = frame_offset + length(f_modulated); % maybe use different value?
 %y_fsynced = z_k(start_first_chunk+1:end); 
 %z_k = y_fsynced; % start of message
-L2 = 4;
-L1 = -4;
+L2 = 3;
+L1 = -3;
 
 message_size = chunk_size - length(modulated_pilot);
 
 chunks = zeros(message_size, n);
+cs = zeros(1, message_size * n);
 filters = zeros(L2-L1, n);
 
-gamma = 0.0001;
+gamma = 0.00001;
 trained_w = zeros(1, L2-L1);
 delta = 1;
 %% Train w for each chunk
@@ -101,6 +128,7 @@ for i = 1:n
     trained_w = LMS(trained_w, pilot, modulated_pilot, delta, gamma);
     filters(:,i) = trained_w; % train their respective filters
     c = z_k(delta + length(modulated_pilot):delta + chunk_size - 1);
+    cs((i-1)*message_size + 1:i*message_size) = c;
     chunks(:,i) = transpose(c);
     delta = delta + chunk_size;
 end
@@ -112,10 +140,10 @@ zk_equalized = zeros(1, message_size * n);
 for i = 1:n
     w = filters(:,i);
     current_chunk = chunks(:,i);
-    vk = filter(w, 1, current_chunk);
-    %vk = conv(current_chunk, w);
-    figure(10000 + i);
-    scatter(real(vk), imag(vk));
+    %vk = filter(w, 1, current_chunk);
+    vk = conv(current_chunk, w);
+    %figure(10000 + i);
+    %scatter(real(vk), imag(vk));
     zk_equalized((i - 1)*message_size + 1: i*message_size) = vk(1:message_size);
 end
 

@@ -45,6 +45,8 @@ end
 %% LDPC Encoding (TODO)
 
 %% Modulate
+%ttt = xk(length(preamble) + length(pilot_sequence) + 1:end);
+
 xk = modulate_4qam(xk);
 xk = xk * d;
 
@@ -55,23 +57,24 @@ xk = upsample(xk, L);
 xk = conv(xk, pt);
 transmitsignal = xk;
 
-% te = conv(transmitsignal, fliplr(pt));
-% te = te(1:L:end);
-% te = te(201:200 + chunk_size/b);
-% te = qamdemod(te, 4);
-% new_te = zeros(1, length(te) * 2);
-% for i = 1:length(te)
-%     guess = de2bi(te(i), 2, 'right-msb');
-%     new_te((i - 1)*2 + 1: i*2) = guess;
-% end
+%te = conv(transmitsignal, fliplr(pt));
+te = 
+te = te(1:L:end);
+te = te(201:200 + chunk_size/b);
+te = qamdemod(te, 4);
+new_te = zeros(1, length(te) * 2);
+for i = 1:length(te)
+    guess = de2bi(te(i), 2, 'right-msb');
+    new_te((i - 1)*2 + 1: i*2) = guess;
+end
 %te = demodulate_4qam(te);
 
-% figure(58)
-% subplot(2,1,1);
-% recovered_image = reshape(ttt, [171, 120]);
-% imshow(recovered_image);
-% subplot(2,1,2);
-% imshow(message);
+figure(58)
+subplot(2,1,1);
+recovered_image = reshape(new_te, [171, 120]);
+imshow(recovered_image);
+subplot(2,1,2);
+imshow(message);
 
 %%
 save('transmitsignal.mat','transmitsignal')
