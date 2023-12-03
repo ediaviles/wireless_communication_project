@@ -31,7 +31,7 @@ rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
 pilot_sequence = (randn(1, 500) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
-preamble = [frequency_sync_bits, timing_sync_bits,fsync_sequence]; %use this for clarity
+preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...

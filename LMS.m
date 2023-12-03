@@ -1,6 +1,6 @@
 function [trained_w] = LMS(trained_w, zk, xk, delta, gamma) % zk is the entire signal, xk is the ideal signal
     % use zk and delta for start of pilot
-    N = 100;
+    N = 1;
     filter_size = length(trained_w);
     step_size = gamma / (zk * conj(transpose(zk)));
     for j = 1:N
