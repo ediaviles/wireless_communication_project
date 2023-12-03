@@ -1,20 +1,20 @@
-%clear
-%clc
+clear
+clc
 
 %message = imread("shannon1440.bmp");
 message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
-packet1 = message_vec(1:length(message_vec)/2);
+%packet1 = message_vec(1:length(message_vec)/2);
 %packet2 = message_vec(length(message_vec)/2 + 1:end);
 
-message_vec = packet1;
+%message_vec = packet1;
 
 %message_vec = packet2;
 
 % M-QAM variables
-M = 4;
+M = 16;
 b = log2(M);
 d = 0.3;
 
@@ -52,15 +52,24 @@ end
 %% LDPC Encoding (TODO)
 
 %% Modulate
-xk = modulate_4qam(xk);
-xk = xk * d;
-
+%xk = modulate_4qam(xk);
+xk_mod = zeros(1, length(xk)/b);
+for i = 1:length(xk_mod)
+    start_i = b*(i - 1) + 1;
+    end_i = b*(i);
+    grouping = xk(start_i:end_i);
+    
+    % Convert binary grouping to decimal
+    decimal_value = bi2de(grouping, 'left-msb');
+    % QAM modulation
+    xk_mod(i) = qammod(decimal_value, M);
+end
 %% Upsample
-xk = upsample(xk, L);
+xk_up = upsample(xk_mod, L);
 
 %% Filter
-xk = conv(xk, pt);
-transmitsignal = xk;
+xk_filt = conv(xk_up, pt);
+transmitsignal = xk_filt;
 
 % te = conv(transmitsignal, fliplr(pt));
 % te = te(1:L:end);
@@ -81,15 +90,15 @@ transmitsignal = xk;
 % imshow(message);
 
 %%
-save('transmitsignal.mat','transmitsignal')
+%save('transmitsignal.mat','transmitsignal')
 %save('transmitpacket1.mat', 'transmitsignal')
 %save('transmitpacket2.mat', 'transmitsignal')
 
-load receivedsignal.mat
+%load receivedsignal.mat
 
 % X axis values for plots %
-t_transmitted = [1:length(transmitsignal)] / Fs * 10^6;
-t_received = [1:length(receivedsignal)] / Fs * 10^6;
-t_p = [-floor(Ns/2):Ns-floor(Ns/2)-1]*T*10^6/(L);
+% t_transmitted = [1:length(transmitsignal)] / Fs * 10^6;
+% t_received = [1:length(receivedsignal)] / Fs * 10^6;
+% t_p = [-floor(Ns/2):Ns-floor(Ns/2)-1]*T*10^6/(L);
 
 

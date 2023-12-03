@@ -2,8 +2,8 @@ sigman = 0.2;
 %receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
-%transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
-%receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
+transmitsignalwithdelay = [zeros(1, 2147), transmitsignal];
+receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn(size(transmitsignalwithdelay))+j*randn(size(transmitsignalwithdelay)));
 %receivedpacket1 = receivedsignal;
 %receivedpacket2 = receivedsignal;
 %save("receivedpacket1.mat", 'receivedsignal');
@@ -15,21 +15,21 @@ matched_filter = fliplr(pt);
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
 
-y = receivedsignal';
+y = receivedsignal;
 
 t = timing_sync_bits; 
-t_modulated = modulate_4qam(t);
+t_modulated = modulate_16qam(t);
 t = t_modulated * d;
 
 
 ps = pilot_sequence * d;
-modulated_pilot = modulate_4qam(pilot_sequence);
+modulated_pilot = modulate_16qam(pilot_sequence);
 p = modulated_pilot * d;
 p = upsample(p, L);
 p = conv(p, pt);
 
 f = fsync_sequence;
-f_modulated = modulate_4qam(f);
+f_modulated = modulate_16qam(f);
 f = f_modulated * d;
 f = upsample(f, L);
 f = conv(f, pt);
@@ -48,11 +48,11 @@ ideal_timing_offset = lags_id(ideal_timing_index);
 y_sync = y(ideal_timing_offset:end); % signal starts at the time sync bits
 
 %% Frame sync
-[fcorr, flags] = xcorr(zt, f);
+[fcorr, flags] = xcorr(y_sync, f);
 [~, frame_index] = max(abs(fcorr));
 frame_offset = flags(frame_index);
 
-y_fsync = y_sync(frame_offset + L:end);
+%y_fsync = y_sync(frame_offset + L:end);
 
 %% DOWNSAMPLE
 z_k = y_sync(1:L:end);
@@ -73,7 +73,7 @@ filters = zeros(L2-L1, n);
 
 gamma = 10;
 trained_w = zeros(1, L2-L1);
-training = 10;
+training = 20;
 %% Train w for each chunk
 for j = 1:training
     delta = 1;
@@ -101,8 +101,17 @@ end
 %% Soft decoding (TODO)
 
 %% Demodulate
-z_demodulated = demodulate_4qam(zk_equalized);
-
+%z_demodulated = demodulate_4qam(zk_equalized);
+z_demodulated = qamdemod(zk_equalized, M);
+guess = ones(1, length(z_demodulated) * b);
+for i = 1:length(z_demodulated)
+    start_i = b*(i - 1) + 1;
+    end_i = b*(i);
+    decimal = z_demodulated(i);
+    binary = de2bi(decimal, b, 'left-msb');
+    guess(start_i:end_i) = binary;
+end
+z_demodulated = guess;
 
 %% BER
 %message = imread("shannon1440.bmp");
@@ -165,12 +174,12 @@ xlabel('Time in microseconds')
 
 
 % recovered image
-% figure(4)
-% subplot(2,1,1);
-% recovered_image = reshape(z_demodulated, [171, 120]);
-% imshow(recovered_image);
-% subplot(2,1,2);
-% imshow(message);
+figure(4)
+subplot(2,1,1);
+recovered_image = reshape(z_demodulated, [171, 120]);
+imshow(recovered_image);
+subplot(2,1,2);
+imshow(message);
 
 %zk - before equalization
 figure(5);
