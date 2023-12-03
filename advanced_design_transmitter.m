@@ -29,13 +29,13 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 frequency_sync_bits = ones(1, 100);
 rng(4);
 timing_sync_bits = (randn(1,100) > 0.5);
-pilot_sequence = (randn(1, 100) > 0.5);
+pilot_sequence = (randn(1, 500) > 0.5);
 fsync_sequence = (randn(1, 100) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits,fsync_sequence]; %use this for clarity
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
-n = 1; % number of chunks
+n = 6; % number of chunks
 chunk_size = length(message_vec) / n;
 xk = [preamble];
 for i = 1:n

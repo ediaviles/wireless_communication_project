@@ -89,21 +89,13 @@ y_psync = y_fsync(offset_indexes(1) + L:end);
 
 %chunk_size = offset_indexes(2) - offset_indexes(1);
 %chunk_size = chunk_size / L; % pilot + message
-chunk_size = 20520/2 + 50;
+chunk_size = length(message_vec)/n/b + length(modulated_pilot);
 %% DOWNSAMPLE
 z_k = ttt; % this starts at the time symbol seq
 
 z_k = z_k(1:chunk_size * n); % remove noise
 
-test = z_k(1 + length(modulated_pilot):end);
-test = demodulate_4qam(test);
 
-figure(54)
-subplot(2,1,1);
-recovered_image = reshape(test, [171, 120]);
-imshow(recovered_image);
-subplot(2,1,2);
-imshow(message);
 
 
 %% Extract first chunk
@@ -119,7 +111,7 @@ chunks = zeros(message_size, n);
 cs = zeros(1, message_size * n);
 filters = zeros(L2-L1, n);
 
-gamma = 0.00001;
+gamma = 0.75;
 trained_w = zeros(1, L2-L1);
 delta = 1;
 %% Train w for each chunk
