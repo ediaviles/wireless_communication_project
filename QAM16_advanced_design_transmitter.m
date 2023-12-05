@@ -16,7 +16,7 @@ message_vec = reshape(message, 1, []);
 % M-QAM variables
 M = 16;
 b = log2(M);
-d = 0.16;
+d = sqrt(2)/3/1.64;
 
 % sampling freq.:
 Fs = 200 * 10^6;
@@ -33,11 +33,11 @@ Ns = floor(N*L); % Number of filter samples
 
 pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1/(L));
 
-frequency_sync_bits = ones(1, 80);
-rng(4);
-timing_sync_bits = (randn(1, 200) > 0.5);
+frequency_sync_bits = ones(1, 1000);
+rng(5);
+timing_sync_bits = (randn(1, 2000) > 0.5);
 % 20 pilots ideal
-pilot_sequence = (randn(1, 52) > 0.5);
+pilot_sequence = (randn(1, 600) > 0.5);
 fsync_sequence = (randn(1, 0) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
@@ -54,19 +54,19 @@ end
 
 %% Modulate
 %xk = modulate_4qam(xk);
-xk_mod = zeros(1, length(xk)/b);
-for i = 1:length(xk_mod)
-    start_i = b*(i - 1) + 1;
-    end_i = b*(i);
-    grouping = xk(start_i:end_i);
-    
-    % Convert binary grouping to decimal
-    decimal_value = bi2de(grouping, 'left-msb');
-    % QAM modulation
-    xk_mod(i) = qammod(decimal_value, M);
-end
+xk_mod = modulate_16qam(xk);
+% xk_mod = zeros(1, length(xk)/b);
+% for i = 1:length(xk_mod)
+%     start_i = b*(i - 1) + 1;
+%     end_i = b*(i);
+%     grouping = xk(start_i:end_i);
+% 
+%     % Convert binary grouping to decimal
+%     decimal_value = bi2de(grouping, 'left-msb');
+%     % QAM modulation
+%     xk_mod(i) = qammod(decimal_value, M);
+% end
 
-xk_mod = xk_mod * d;
 
 %% Upsample
 xk_up = upsample(xk_mod, L);

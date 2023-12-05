@@ -1,4 +1,4 @@
-sigman = 0.2;
+sigman = 0;
 %receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
@@ -10,14 +10,14 @@ receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn
 %save("receivedpacket1.mat", 'receivedsignal');
 %save("receivedpacket2.mat", 'receivedsignal');
 
-load receivedsignal.mat
+%load receivedsignal.mat
 
 matched_filter = fliplr(pt);
 
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
 
-y = receivedsignal';
+y = receivedsignal;
 
 t = timing_sync_bits; 
 t_modulated = modulate_16qam(t);
@@ -26,7 +26,7 @@ t = t_modulated * d;
 
 ps = pilot_sequence * d;
 modulated_pilot = modulate_16qam(pilot_sequence);
-p = modulated_pilot * d;
+p = modulated_pilot;
 p = upsample(p, L);
 p = conv(p, pt);
 
@@ -45,6 +45,7 @@ t = conv(t, pt);
 
 %t = conv(t, matched_filter);
 pr = modulate_16qam(preamble);
+modulated_preamble = pr;
 pr = upsample(pr, L);
 pr = conv(pr, pt);
 
@@ -55,16 +56,13 @@ ideal_timing_offset = lags_id(ideal_timing_index);
 y_sync = y(ideal_timing_offset+L:end); % signal starts at the time sync bits
 
 %% Frame sync
-% [fcorr, flags] = xcorr(y_sync, f);
-% [~, frame_index] = max(abs(fcorr));
-% frame_offset = flags(frame_index);
 
-%y_fsync = y_sync(frame_offset + L:end);
+
+
 
 %% DOWNSAMPLE
-freq_mod = modulate_16qam(frequency_sync_bits);
 z_k = y_sync(1:L:end);
-z_k = z_k(length(t_modulated) + length(freq_mod) + 1:end); %point to first pilot
+z_k = z_k(length(modulated_preamble) + 1:end); %point to first pilot
 
 chunk_size = length(message_vec)/n/b + length(modulated_pilot);
 z_k = z_k(1:chunk_size * n); % remove noise
@@ -81,13 +79,14 @@ filters = zeros(L2-L1, n);
 
 gamma = 10;
 trained_w = zeros(1, L2-L1);
-training = 20;
+training = 40;
 %% Train w for each chunk
 for j = 1:training
     delta = 1;
     gamma = gamma / 2;
     for i = 1:n
         pilot = z_k(delta:delta + length(modulated_pilot) - 1);
+        %trained_w = zeros(1, L2-L1);
         trained_w = LMS(trained_w, pilot, modulated_pilot, delta, gamma);
         filters(:,i) = trained_w; % train their respective filters
         c = z_k(delta + length(modulated_pilot):delta + chunk_size - 1);
@@ -110,16 +109,17 @@ end
 
 %% Demodulate
 %z_demodulated = demodulate_4qam(zk_equalized);
-z_demodulated = qamdemod(zk_equalized, M);
-guess = ones(1, length(z_demodulated) * b);
-for i = 1:length(z_demodulated)
-    start_i = b*(i - 1) + 1;
-    end_i = b*(i);
-    decimal = z_demodulated(i);
-    binary = de2bi(decimal, b, 'left-msb');
-    guess(start_i:end_i) = binary;
-end
-z_demodulated = guess;
+% z_demodulated = qamdemod(zk_equalized, M);
+% 
+% guess = ones(1, length(z_demodulated) * b);
+% for i = 1:length(z_demodulated)
+%     start_i = b*(i - 1) + 1;
+%     end_i = b*(i);
+%     decimal = z_demodulated(i);
+%     binary = de2bi(decimal, b, 'left-msb');
+%     guess(start_i:end_i) = binary;
+% end
+z_demodulated = demodulate_16qam(zk_equalized);
 
 %% BER
 %message = imread("shannon1440.bmp");

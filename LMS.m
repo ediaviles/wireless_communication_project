@@ -3,6 +3,7 @@ function [trained_w] = LMS(trained_w, zk, xk, delta, gamma) % zk is the entire s
     N = 1;
     filter_size = length(trained_w);
     step_size = gamma / (zk * conj(transpose(zk)));
+    %step_size = 0.1;
     for j = 1:N
         for i = filter_size:length(xk)
             %u = zk(i + delta:-1:i + delta - order + 1); % received pilot
