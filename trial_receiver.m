@@ -1,4 +1,4 @@
-sigman = 0.1;
+sigman = 0.3;
 %receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;

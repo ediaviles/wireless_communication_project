@@ -5,6 +5,7 @@ clc
 %message = imread("shannon20520.bmp");
 message = imread("shannon13720.bmp");
 
+
 message_vec = reshape(message, 1, []);
 
 %packet1 = message_vec(1:length(message_vec)/2);
@@ -41,13 +42,13 @@ frequency_sync_bits = ones(1, 44);
 rng(6);
 timing_sync_bits = (randn(1, 100) > 0.5);
 % 20 pilots ideal
-pilot_sequence = (randn(1, 16 * 13) > 0.5);
+pilot_sequence = (randn(1, 4 * 13) > 0.5);
 fsync_sequence = (randn(1, 0) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
 
 % x_k divide into n chunks -> pilot, n_1, pilot, n_2 ...
-n = 35; % number of chunks
+n = 14; % number of chunks
 chunk_size = length(message_vec) / n;
 xk = [preamble];
 for i = 1:n
