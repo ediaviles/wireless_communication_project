@@ -20,18 +20,18 @@ t_received = [1:length(receivedsignal)] / Fs * 10^6;
 y = receivedsignal.';
 
 t = timing_sync_bits; 
-t_modulated = modulate_16qam(t);
+t_modulated = modulate_4qam(t);
 t = t_modulated * d;
 
 
 ps = pilot_sequence * d;
-modulated_pilot = modulate_16qam(pilot_sequence);
+modulated_pilot = modulate_4qam(pilot_sequence);
 p = modulated_pilot;
 p = upsample(p, L);
 p = conv(p, pt);
 
 % f = fsync_sequence;
-% f_modulated = modulate_16qam(f);
+% f_modulated = modulate_4qam(f);
 % f = f_modulated * d;
 % f = upsample(f, L);
 % f = conv(f, pt);
@@ -44,7 +44,7 @@ t = upsample(t, L);
 t = conv(t, pt);
 
 %t = conv(t, matched_filter);
-pr = modulate_16qam(preamble);
+pr = modulate_4qam(preamble);
 modulated_preamble = pr;
 pr = upsample(pr, L);
 pr = conv(pr, pt);
@@ -113,6 +113,8 @@ for i = 1:n
 end
 
 %% Soft decoding (TODO)
+max_iterations = 100;
+zk_decoded = ldpc_decoder(zk_equalized, H, max_iterations);
 
 %% Demodulate
 %z_demodulated = demodulate_4qam(zk_equalized);
@@ -126,7 +128,7 @@ end
 %     binary = de2bi(decimal, b, 'left-msb');
 %     guess(start_i:end_i) = binary;
 % end
-z_demodulated = demodulate_16qam(zk_equalized);
+z_demodulated = demodulate_4qam(zk_decoded);
 
 %% BER
 %message = imread("shannon1440.bmp");

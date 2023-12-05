@@ -15,7 +15,7 @@ message_vec = reshape(message, 1, []);
 %message_vec = packet2;
 
 % M-QAM variables
-M = 16;
+M = 4;
 b = log2(M);
 d = sqrt(2)/3/1.64;
 %d = 0.315;
