@@ -37,11 +37,11 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 
 % 52,200,96,0,114
 
-frequency_sync_bits = ones(1, 44);
+frequency_sync_bits = ones(1, 52);
 rng(6);
 timing_sync_bits = (randn(1, 100) > 0.5);
 % 20 pilots ideal
-pilot_sequence = (randn(1, 16 * 13) > 0.5);
+pilot_sequence = (randn(1, 16 * ) > 0.5);
 fsync_sequence = (randn(1, 0) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 

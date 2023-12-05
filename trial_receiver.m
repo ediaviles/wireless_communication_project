@@ -1,4 +1,4 @@
-sigman = 0;
+sigman = 0.1;
 %receivedsignal = transmitsignal + sigman/sqrt(2) * (randn(size(transmitsignal))+j*randn(size(transmitsignal)));
 %T o test the effect of phase offset and delay, you could simulate such a channel as
 %padding = (randn(1,1000) > 0.5) * 2 - 1;
@@ -10,14 +10,14 @@ receivedsignal = exp(j*pi/6) * transmitsignalwithdelay + sigman/sqrt(2) * (randn
 %save("receivedpacket1.mat", 'receivedsignal');
 %save("receivedpacket2.mat", 'receivedsignal');
 
-load receivedsignal.mat
+%load receivedsignal.mat
 
 matched_filter = fliplr(pt);
 
 t_received = [1:length(receivedsignal)] / Fs * 10^6;
 
 
-y = receivedsignal.';
+y = receivedsignal;
 
 t = timing_sync_bits; 
 t_modulated = modulate_4qam(t);
@@ -67,7 +67,9 @@ y_sync = y(ideal_timing_offset:end); % signal starts at the time sync bits
 z_k = y_sync(1:L:end);
 z_k = z_k(length(modulated_preamble) + 1:end); %point to first pilot
 
-chunk_size = length(message_vec)/n/b + length(modulated_pilot);
+%chunk_size = (length(message_vec)/n/b + length(modulated_pilot))/rate;
+chunk_size = (length(message_vec)/n/b + length(modulated_pilot));
+
 z_k = z_k(1:chunk_size * n); % remove noise
 
 
@@ -114,7 +116,8 @@ end
 
 %% Soft decoding (TODO)
 max_iterations = 100;
-zk_decoded = ldpc_decoder(zk_equalized, H, max_iterations);
+%zk_llr = compute_llr(zk_equalized, 0.1);
+%zk_decoded = decode_llr(zk_llr, H, max_iterations);
 
 %% Demodulate
 %z_demodulated = demodulate_4qam(zk_equalized);
@@ -128,13 +131,15 @@ zk_decoded = ldpc_decoder(zk_equalized, H, max_iterations);
 %     binary = de2bi(decimal, b, 'left-msb');
 %     guess(start_i:end_i) = binary;
 % end
-z_demodulated = demodulate_4qam(zk_decoded);
-
+%z_demodulated = demodulate_4qam(zk_decoded);
+z_demodulated = demodulate_4qam(zk_equalized);
 %% BER
 %message = imread("shannon1440.bmp");
 %message = imread("shannon20520.bmp");
 
-%message_vec = reshape(message, 1, []);
+message = imread("shannon13720.bmp");
+
+message_vec = reshape(message, 1, []);
 
 %bits = message_vec;
 bits = message_vec(1:length(message_vec));
@@ -193,7 +198,7 @@ xlabel('Frequency in MHz')
 % recovered image
 figure(4)
 subplot(2,1,1);
-recovered_image = reshape(z_demodulated, [171, 120]);
+recovered_image = reshape(z_demodulated, [140, 98]);
 imshow(recovered_image);
 subplot(2,1,2);
 imshow(message);

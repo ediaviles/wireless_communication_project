@@ -3,8 +3,10 @@ function decoded_bits = decode_llr(received_llrs, H, max_iterations)
     % H: Parity-check matrix
     % max_iterations: Maximum number of iterations for the decoder
 
-    % Initialize
+    % Initialize 
     [m, n] = size(H); % Size of the parity-check matrix
+    length(received_llrs)
+    n
     if length(received_llrs) ~= n
         error('Length of received_llrs must match the number of columns in H');
     end
