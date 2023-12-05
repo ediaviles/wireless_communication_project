@@ -1,4 +1,4 @@
-function [modulated_symbols] = modulate_16qam(signal_bits)
+function [demodulated_signal] = demodulate_16qam(symbols)
     M = 16;
     b = log2(M);
     d = sqrt(2)/3/1.64;
@@ -8,16 +8,19 @@ function [modulated_symbols] = modulate_16qam(signal_bits)
            1.5-1.5j, 0.5-1.5j, -1.5-1.5j, -0.5-1.5j
            1.5-0.5j, 0.5-0.5j, -1.5-0.5j, -0.5-0.5j] .* d;
     options = reshape(options, 1, []);
-
-    modulated_symbols = zeros(1, length(signal_bits)/b);
-    for i = 1:length(modulated_symbols)
+    demodulated_signal = zeros(1, length(symbols)*b);
+    for i = 1:length(symbols)
+        symbol = symbols(i);
         start_i = b*(i - 1) + 1;
         end_i = b*(i);
-        grouping = signal_bits(start_i:end_i);
+        
+
+        [min_val, min_idx] = min(symbol - options);
+        decimal = min_idx - 1;
         
         % Convert binary grouping to decimal
-        decimal_value = bi2de(grouping, 'left-msb');
+        binary_value = de2bi(decimal, b, 'left-msb');
         % QAM modulation
-        modulated_symbols(i) = options(decimal_value+1);
+        demodulated_signal(start_i:end_i) = binary_value;
     end
 end
