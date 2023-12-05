@@ -144,8 +144,8 @@ disp(['BER is ', num2str(BER)])
 %% Plots
 
 %transmited and received signals and pt
-t_transmitted = [0:length(transmitsignal)-1] / Fs;
 t_received = [0:length(receivedsignal)-1] / Fs;
+t_transmitted = [0:length(transmitsignal)-1] / Fs;
 figure(1)
 clf
 subplot(2,1,1)

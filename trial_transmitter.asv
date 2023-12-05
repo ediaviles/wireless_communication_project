@@ -3,7 +3,7 @@ clc
 
 %message = imread("shannon1440.bmp");
 %message = imread("shannon20520.bmp");
-message = imread("shannon13720.bmp");
+message = imread("shannon20520.bmp");
 
 message_vec = reshape(message, 1, []);
 
@@ -39,9 +39,9 @@ pt = sinc([-floor(Ns/2):Ns-floor(Ns/2)-1]/L); pt = transpose(pt)/norm(pt)/sqrt(1
 
 frequency_sync_bits = ones(1, 52);
 rng(6);
-timing_sync_bits = (randn(1, 100) > 0.5);
+timing_sync_bits = (randn(1, 200) > 0.5);
 % 20 pilots ideal
-pilot_sequence = (randn(1, 48) > 0.5);
+pilot_sequence = (randn(1, 96) > 0.5);
 fsync_sequence = (randn(1, 0) > 0.5);
 preamble = [frequency_sync_bits, timing_sync_bits, fsync_sequence]; %use this for clarity
 
@@ -56,17 +56,16 @@ end
 
 %% LDPC Encoding (TODO)
 % xk has length 14820  =  info_bits:
-% xk has length 14352  =  info_bits:
 info_bits = length(xk);
 % rate:
-r1 = 12;
-r2 = 13;
+r1 = 3;
+r2 = 4;
 rate = r1/r2;
 % block_length;
 block_length = info_bits / rate;
 % num_constr:
 num_constr = block_length - info_bits;
-%%
+
 % Gallager LDPC : did not work/not easy to convert into standard form
 H = zeros(num_constr, block_length);
 G = zeros(info_bits, block_length);
