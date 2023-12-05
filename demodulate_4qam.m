@@ -1,12 +1,13 @@
 function [signal_bits] = demodulate_4qam(modulated_symbols)
     M = 4;
     b = log2(M);
+    d = 0.8;
     constellation = [
        -1 - j,
        -1 + j,
         1 - j,
         1 + j
-    ];
+    ] .* d/2;
     signal_bits = zeros(1, length(modulated_symbols)*b);
     for i = 1:length(modulated_symbols)
         symbol = modulated_symbols(i);
