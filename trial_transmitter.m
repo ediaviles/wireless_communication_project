@@ -54,6 +54,50 @@ for i = 1:n
 end
 
 %% LDPC Encoding (TODO)
+% xk has length 14820  =  info_bits:
+info_bits = length(xk);
+% rate:
+r1 = 3;
+r2 = 4;
+rate = r1/r2;
+% block_length;
+block_length = info_bits / rate;
+% num_constr:
+num_constr = block_length - info_bits;
+
+% Gallager LDPC : did not work/not easy to convert into standard form
+H = zeros(num_constr, block_length);
+G = zeros(info_bits, block_length);
+const = 2;
+w_c = (r2-r1)*const;
+w_r = (r2)*const;
+A_0 = zeros(num_constr/w_c, block_length);
+% for i_row = 1 : num_constr/w_c
+%     A_0(i_row, (i_row - 1)*w_r + 1:i_row*w_r) = 1;
+% end
+% for i_col = 1 : w_c
+%     H((i_col-1)*num_constr/w_c + 1 : i_col * num_constr/w_c, :) =  A_0(:,randperm(size(A_0,2)));
+% end
+
+% Create H in standard form instead:
+I_H = eye(num_constr);
+H(:, info_bits+1:end) = I_H;
+
+P_H = zeros(num_constr, info_bits);
+
+
+% Convert H to G:
+I_G = eye(info_bits);
+P_G = P_H';
+G(:, 1:info_bits) = I_G;
+G(:, info_bits+1:end) = P_G;
+
+encoded_xk = mod(xk * G, 2);
+
+
+%encodercfg = ldpcEncoderConfig(H);
+
+%codeword = ldpcEncode(xk, cfgLDPCEnc);
 
 %% Modulate
 %xk = modulate_4qam(xk);
